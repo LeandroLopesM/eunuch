@@ -7,59 +7,58 @@ import (
 )
 
 func RegisterSelf(eng *Engine) {
-	eng.AddFunc("display", []Type{Any}, true, None, display)
-	eng.AddFunc("newline", []Type{}, false, None, newline)
+	eng.AddFunc("display"      , Builtin{ Args: []Type{Any} ,                  VarArgs: true,  Return: None,   Call: display})
+	eng.AddFunc("newline"      , Builtin{ Args: []Type{}    ,                  VarArgs: false, Return: None,   Call: newline})
 
-	eng.AddFunc("string?", []Type{Any}, false, Bool, isX(String))
-	eng.AddFunc("symbol?", []Type{Any}, false, Bool, isX(Symbol))
-	eng.AddFunc("boolean?", []Type{Any}, false, Bool, isX(Bool))
-	eng.AddFunc("integer?", []Type{Any}, false, Bool, isX(Integer))
-	eng.AddFunc("rational?", []Type{Any}, false, Bool, isX(Float))
-	
-	eng.AddFunc("+", []Type{Number}, true, Number, MathOp('+'))
-	eng.AddFunc("-", []Type{Number}, true, Number, MathOp('-'))
-	eng.AddFunc("*", []Type{Number}, true, Number, MathOp('*'))
-	eng.AddFunc("/", []Type{Number}, true, Number, MathOp('/'))
-	eng.AddFunc("expt", []Type{Number}, true, Number, expt)
+	eng.AddFunc("string?"      , Builtin{ Args: []Type{Any} ,                  VarArgs: false, Return: Bool,   Call: isX(String)})
+	eng.AddFunc("symbol?"      , Builtin{ Args: []Type{Any} ,                  VarArgs: false, Return: Bool,   Call: isX(Symbol)})
+	eng.AddFunc("boolean?"     , Builtin{ Args: []Type{Any} ,                  VarArgs: false, Return: Bool,   Call: isX(Bool)})
+	eng.AddFunc("integer?"     , Builtin{ Args: []Type{Any} ,                  VarArgs: false, Return: Bool,   Call: isX(Integer)})
+	eng.AddFunc("rational?"    , Builtin{ Args: []Type{Any} ,                  VarArgs: false, Return: Bool,   Call: isX(Float)})
+	eng.AddFunc("eqv"          , Builtin{ Args: []Type{Any} ,                  VarArgs: true,  Return: Bool,   Call: eqv})
 
-	eng.AddFunc("max", []Type{Number}, true, Number, OrdOp('>'))
-	eng.AddFunc("min", []Type{Number}, true, Number, OrdOp('<'))
+	eng.AddFunc("+"            , Builtin{ Args: []Type{Number},                VarArgs: true,  Return: Number, Call: MathOp('+')})
+	eng.AddFunc("-"            , Builtin{ Args: []Type{Number},                VarArgs: true,  Return: Number, Call: MathOp('-')})
+	eng.AddFunc("*"            , Builtin{ Args: []Type{Number},                VarArgs: true,  Return: Number, Call: MathOp('*')})
+	eng.AddFunc("/"            , Builtin{ Args: []Type{Number},                VarArgs: true,  Return: Number, Call: MathOp('/')})
+	eng.AddFunc("expt"         , Builtin{ Args: []Type{Number},                VarArgs: true,  Return: Number, Call: expt})
+	eng.AddFunc("max"          , Builtin{ Args: []Type{Number},                VarArgs: true,  Return: Number, Call: OrdOp('>')})
+	eng.AddFunc("min"          , Builtin{ Args: []Type{Number},                VarArgs: true,  Return: Number, Call: OrdOp('<')})
 
+	eng.AddFunc("string"       , Builtin{ Args: []Type{Char},                  VarArgs: true,  Return: String, Call: stringize})
+	eng.AddFunc("string-ref"   , Builtin{ Args: []Type{String, Integer},       VarArgs: false, Return: Char,   Call: stringRef})
+	eng.AddFunc("string-append", Builtin{ Args: []Type{String},                VarArgs: true,  Return: String, Call: stringConcat})
+	eng.AddFunc("make-string"  , Builtin{ Args: []Type{Integer},               VarArgs: false, Return: String, Call: stringCreate}) // This shouldnt get used muc}h
+	eng.AddFunc("string-set!"  , Builtin{ Args: []Type{Symbol, Integer, Char}, VarArgs: false, Return: String, Call: stringSet}) // This shouldnt get used muc}h
 
-	eng.AddFunc("eqv", []Type{Any}, true, Bool, eqv)
-	
-	eng.AddFunc("define", []Type{Symbol, Any}, false, None, define)
-	
-	eng.AddFunc("string", []Type{Char}, true, String, stringize)
-	eng.AddFunc("string-ref", []Type{String, Integer}, false, Char, stringRef)
-	eng.AddFunc("string-append", []Type{String}, true, String, stringConcat)
-	eng.AddFunc("make-string", []Type{Integer}, false, String, stringCreate) // This shouldnt get used much
-	eng.AddFunc("string-set!", []Type{Symbol, Integer, Char}, false, String, stringSet) // This shouldnt get used much
-	
-	eng.AddFunc("vector", []Type{Any}, true, Vector, vector)
-	eng.AddFunc("vector-ref", []Type{Vector, Integer}, false, Any, vector)
-	eng.AddFunc("make-vector", []Type{Integer}, false, Vector, vectorCreate) // This shouldnt get used much
-	eng.AddFunc("vector-set!", []Type{Symbol, Integer, Any}, false, Vector, vectorSet) // This shouldnt get used much
-	
-	eng.AddFunc("char=?", []Type{Char}, false, Bool, charOp("="))
-	eng.AddFunc("char>?", []Type{Char}, false, Bool, charOp(">"))
-	eng.AddFunc("char<?", []Type{Char}, false, Bool, charOp("<"))
-	eng.AddFunc("char>=?", []Type{Char}, false, Bool, charOp(">="))
-	eng.AddFunc("char<=?", []Type{Char}, false, Bool, charOp("<="))
-	
-	eng.AddFunc("char-ci=?", []Type{Char}, false, Bool, charCiOp("="))
-	eng.AddFunc("char-ci>?", []Type{Char}, false, Bool, charCiOp(">"))
-	eng.AddFunc("char-ci<?", []Type{Char}, false, Bool, charCiOp("<"))
-	eng.AddFunc("char-ci>=?", []Type{Char}, false, Bool, charCiOp(">="))
-	eng.AddFunc("char-ci<=?", []Type{Char}, false, Bool, charCiOp("<="))
-	
-	eng.AddFunc("car", []Type{Pair}, false, Any, pairGet(0))
-	eng.AddFunc("cdr", []Type{Pair}, false, Any, pairGet(1))
-	eng.AddFunc("set-car!", []Type{Symbol}, false, None, pairSet(0))
-	eng.AddFunc("set-cdr!", []Type{Symbol}, false, None, pairSet(1))
-	eng.AddFunc("cons", []Type{Any, Any}, false, Pair, newPair)
+	eng.AddFunc("vector"       , Builtin{ Args: []Type{Any} ,                  VarArgs: true,  Return: Vector, Call: vector})
+	eng.AddFunc("vector-ref"   , Builtin{ Args: []Type{Vector, Integer},       VarArgs: false, Return: Any,    Call: vector})
+	eng.AddFunc("make-vector"  , Builtin{ Args: []Type{Integer},               VarArgs: false, Return: Vector, Call: vectorCreate}) // This shouldnt get used muc}h
+	eng.AddFunc("vector-set!"  , Builtin{ Args: []Type{Symbol, Integer, Any},  VarArgs: false, Return: Vector, Call: vectorSet}) // This shouldnt get used muc}h
 
-	eng.AddFunc("quote", []Type{Any}, false, Any, quote)
+	eng.AddFunc("char=?"       , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charOp("=" )})
+	eng.AddFunc("char>?"       , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charOp(">" )})
+	eng.AddFunc("char<?"       , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charOp("<" )})
+	eng.AddFunc("char>=?"      , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charOp(">=")})
+	eng.AddFunc("char<=?"      , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charOp("<=")})
+
+	eng.AddFunc("char-ci=?"    , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charCiOp("=" )})
+	eng.AddFunc("char-ci>?"    , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charCiOp(">" )})
+	eng.AddFunc("char-ci<?"    , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charCiOp("<" )})
+	eng.AddFunc("char-ci>=?"   , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charCiOp(">=")})
+	eng.AddFunc("char-ci<=?"   , Builtin{ Args: []Type{Char},                  VarArgs: false, Return: Bool,   Call: charCiOp("<=")})
+
+	eng.AddFunc("car"          , Builtin{ Args: []Type{Pair},                  VarArgs: false, Return: Any,    Call: pairGet(0)})
+	eng.AddFunc("cdr"          , Builtin{ Args: []Type{Pair},                  VarArgs: false, Return: Any,    Call: pairGet(1)})
+	eng.AddFunc("set-car!"     , Builtin{ Args: []Type{Symbol},                VarArgs: false, Return: None,   Call: pairSet(0)})
+	eng.AddFunc("set-cdr!"     , Builtin{ Args: []Type{Symbol},                VarArgs: false, Return: None,   Call: pairSet(1)})
+	eng.AddFunc("cons"         , Builtin{ Args: []Type{Any, Any},              VarArgs: false, Return: Pair,   Call: newPair})
+
+	eng.AddFunc("define"       , Builtin{ Args: []Type{Symbol, Any},           VarArgs: false, Return: None,   Call: define})
+	eng.AddFunc("quote",Builtin{ Args: []Type{Any},VarArgs: false,Return: Any, Call: quote,Prepare: func(s Scheme,e *Engine) error {
+		e.Push(s.Args[0])
+		return nil
+	},MustPrepare: true});
 }
 
 func quote(e *Engine) error {
@@ -71,14 +70,14 @@ func quote(e *Engine) error {
 func define(e *Engine) error {
 	value := util.Assert(e.Pop())
 	name := util.Assert(e.Pop())
-	
-	e.SetVar(name.Value.(string), value)
+
+	e.SetVar(name.Value.(string),value)
 	return nil
 }
 
 func isX(which Type) BuiltinExec {
 	return func(e *Engine) error {
-		if val, err := e.Pop(); e != nil {
+		if val,err := e.Pop(); e != nil {
 			return err
 		} else {
 			e.Push(MkBool(val.Type == which))
@@ -110,10 +109,10 @@ func display(e *Engine) error {
 	var args []Unit
 
 	for {
-		if val, err := e.Pop(); err != nil {
+		if val,err := e.Pop(); err != nil {
 			break
 		} else {
-			args = append(args, val)
+			args = append(args,val)
 		}
 	}
 

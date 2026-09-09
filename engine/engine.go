@@ -13,12 +13,16 @@ import (
 )
 
 type BuiltinExec func(e *Engine) error
+type StagingFunc func(Scheme, *Engine) error
 
 type Builtin struct {
 	Args    []Type
-	VarArgs bool
+	VarArgs bool // Is the function var_arg
 
-	Ret Type
+	Return Type
+
+	Prepare StagingFunc // Custom function for checking parameters
+	MustPrepare bool
 
 	Call BuiltinExec
 }
@@ -146,7 +150,7 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 			}
 
 			// If the function exists, use it's return value as the type
-			inType = self.funcs[asScheme.Name].Ret
+			inType = self.funcs[asScheme.Name].Return
 		
 		// If the passed argument is a symbol and we dont want a symbol, get its actual type
 		} else if scheme.Args[idx].Type == Symbol && !actualFn.Args[idx].Matches(Symbol) {
@@ -182,14 +186,21 @@ func (self *Engine) runScheme(scheme Scheme) error {
 	fn := self.funcs[scheme.Name] // Function must exist (Already checked with checkScheme)
 	self.saveStack()
 
-	var i int
-	for _, arg := range scheme.Args {
-		self.evalExpr(arg)
-
-		if !fn.VarArgs {
-			i++
+	if fn.MustPrepare {
+		if err := fn.Prepare(scheme, self); err != nil {
+			return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name, aurora.Red(err))
+		}
+	} else {
+		var i int
+		for _, arg := range scheme.Args {
+			self.evalExpr(arg)
+	
+			if !fn.VarArgs {
+				i++
+			}
 		}
 	}
+
 
 	ret := fn.Call(self)
 
@@ -201,20 +212,14 @@ func (self *Engine) runScheme(scheme Scheme) error {
 	return nil
 }
 
-func (self *Engine) AddFunc(name string, args []Type, isVarArg bool, ret Type, call BuiltinExec) error {
+func (self *Engine) AddFunc(name string, fn Builtin) error {
 	for k := range self.funcs {
 		if k == name {
 			return fmt.Errorf("Attemt to redeclare function %s", name)
 		}
 	}
 
-	self.funcs[name] = Builtin{
-		Args:    args,
-		VarArgs: isVarArg,
-		Call:    call,
-
-		Ret: ret,
-	}
+	self.funcs[name] = fn;
 
 	return nil
 }
