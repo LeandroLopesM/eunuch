@@ -17,7 +17,12 @@ func PrintUnit(unit Unit) {
 func SprintUnit(unit Unit) string {
 	switch unit.Type {
 	case SchemeType:
-		return fmt.Sprintf("Scheme<%s>", unit.Value.(Scheme).Name)
+		asScheme := unit.Value.(Scheme)
+		var ret string = fmt.Sprintf("(%s", asScheme.Name)
+		for i := range asScheme.Args {
+			ret += fmt.Sprintf(" %s", SprintUnit(asScheme.Args[i]))
+		}
+		return ret + ")"
 	case Symbol:
 		return fmt.Sprintf("%s", unit.Value.(string))
 	case Float:
@@ -38,12 +43,12 @@ func SprintUnit(unit Unit) string {
 		var ret string
 		for i := range asVec {
 			if i != 0 {
-				ret = fmt.Sprintf("%s, %s", ret, SprintUnit(asVec[i]))
+				ret = fmt.Sprintf("%s %s", ret, SprintUnit(asVec[i]))
 			} else {
-				ret = fmt.Sprintf("[ %s", SprintUnit(asVec[i]))
+				ret = fmt.Sprintf("#(%s", SprintUnit(asVec[i]))
 			}
 		}
-		return fmt.Sprintf("%s ]", ret)
+		return fmt.Sprintf("%s)", ret)
 	default:
 		panic(fmt.Sprintf("Unknown type %v", unit))
 	}

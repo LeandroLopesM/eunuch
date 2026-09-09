@@ -182,11 +182,12 @@ func (self *Engine) runScheme(scheme Scheme) error {
 	fn := self.funcs[scheme.Name] // Function must exist (Already checked with checkScheme)
 	self.saveStack()
 
-	for i, arg := range scheme.Args {
-		if arg.Type == Symbol && fn.Args[i] == Symbol {
-			self.Push(arg)
-		} else {
-			self.evalExpr(arg)
+	var i int
+	for _, arg := range scheme.Args {
+		self.evalExpr(arg)
+
+		if !fn.VarArgs {
+			i++
 		}
 	}
 

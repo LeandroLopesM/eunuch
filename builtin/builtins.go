@@ -1,8 +1,6 @@
 package builtin
 
 import (
-	"errors"
-
 	. "github.com/leandrolopesm/eunuch/core"
 	. "github.com/leandrolopesm/eunuch/engine"
 	"github.com/leandrolopesm/eunuch/util"
@@ -60,20 +58,21 @@ func RegisterSelf(eng *Engine) {
 	eng.AddFunc("set-car!", []Type{Symbol}, false, None, pairSet(0))
 	eng.AddFunc("set-cdr!", []Type{Symbol}, false, None, pairSet(1))
 	eng.AddFunc("cons", []Type{Any, Any}, false, Pair, newPair)
-	
+
+	eng.AddFunc("quote", []Type{Any}, false, Any, quote)
+}
+
+func quote(e *Engine) error {
+	e.Push(util.Assert(e.Pop()))
+
+	return nil
 }
 
 func define(e *Engine) error {
-	if value, err := e.Pop(); err != nil {
-		return errors.New("Expected variable value")
-	} else {
-		if name, err := e.Pop(); err != nil {
-			return errors.New("Expected variable name")
-		} else {
-			e.SetVar(name.Value.(string), value)
-		}
-	}
-
+	value := util.Assert(e.Pop())
+	name := util.Assert(e.Pop())
+	
+	e.SetVar(name.Value.(string), value)
 	return nil
 }
 
