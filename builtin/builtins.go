@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"github.com/charmbracelet/log"
 	. "github.com/leandrolopesm/eunuch/core"
 	. "github.com/leandrolopesm/eunuch/engine"
 	"github.com/leandrolopesm/eunuch/util"
@@ -53,12 +54,24 @@ func RegisterSelf(eng *Engine) {
 	eng.AddFunc("set-car!"     , Builtin{ Args: []Type{Symbol},                VarArgs: false, Return: None,   Call: pairSet(0)})
 	eng.AddFunc("set-cdr!"     , Builtin{ Args: []Type{Symbol},                VarArgs: false, Return: None,   Call: pairSet(1)})
 	eng.AddFunc("cons"         , Builtin{ Args: []Type{Any, Any},              VarArgs: false, Return: Pair,   Call: newPair})
-
+	
 	eng.AddFunc("define"       , Builtin{ Args: []Type{Symbol, Any},           VarArgs: false, Return: None,   Call: define})
-	eng.AddFunc("quote",Builtin{ Args: []Type{Any},VarArgs: false,Return: Any, Call: quote,Prepare: func(s Scheme,e *Engine) error {
-		e.Push(s.Args[0])
-		return nil
-	},MustPrepare: true});
+
+	eng.AddFunc(
+		"quote",
+		Builtin{
+			Args: []Type{Any},
+			VarArgs: false,
+			Return: Any,
+			Call: quote,
+			Prepare: func(s Scheme,e *Engine) error {
+				log.Warnf("")
+				e.Push(MkSymbol(SprintUnit(s.Args[0])))
+				return nil
+			},
+			MustPrepare: true,
+			},
+		);
 }
 
 func quote(e *Engine) error {

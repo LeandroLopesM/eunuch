@@ -185,27 +185,29 @@ func (self *Engine) runScheme(scheme Scheme) error {
 
 	fn := self.funcs[scheme.Name] // Function must exist (Already checked with checkScheme)
 	self.saveStack()
+	defer self.loadStack();
 
 	if fn.MustPrepare {
 		if err := fn.Prepare(scheme, self); err != nil {
 			return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name, aurora.Red(err))
 		}
 	} else {
-		var i int
 		for _, arg := range scheme.Args {
 			self.evalExpr(arg)
-	
-			if !fn.VarArgs {
-				i++
-			}
 		}
 	}
 
+	log.Debugf("== Stack for %s ==", scheme.Name)
+	for i,elem := range self.stack.raw[0:self.stack.ptr] {
+		if elem.Value == nil {
+			break
+		}
 
-	ret := fn.Call(self)
+		log.Debugf("> Stack %d: %s", i, SprintUnit(elem))
+	}
+	log.Debugf("=============%s===", strings.Repeat("=", len([]rune(scheme.Name))))
 
-	self.loadStack()
-	if ret != nil {
+	if ret := fn.Call(self); ret != nil {
 		return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name, aurora.Red(ret))
 	}
 

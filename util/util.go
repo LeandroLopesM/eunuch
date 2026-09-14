@@ -2,6 +2,7 @@ package util
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/charmbracelet/log"
@@ -58,8 +59,7 @@ func Args() Options {
 
 func Assert[T any](a T, err error) T {
 	if err != nil {
-		log.Errorf("Assert non-err failed: %s", err)
-		os.Exit(1)
+		panic(fmt.Sprintf("Assert non-err failed: %s", err))
 	}
 
 	return a

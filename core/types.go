@@ -82,6 +82,12 @@ func MkFloat(v float64) Unit {
 		Value: v,
 	}
 }
+func MkSymbol(v string) Unit {
+	return Unit{
+		Type:  Symbol,
+		Value: v,
+	}
+}
 func MkBool(v bool) Unit {
 	return Unit{
 		Type:  Bool,

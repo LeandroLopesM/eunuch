@@ -47,15 +47,15 @@ func (self *Stack[T]) Peek() (T, error) {
 	return val, err
 }
 
-func (self *Stack[T]) grow() {
-	last := self.raw
-	self.raw = make([]T, self.size*2)
-	copy(last, self.raw)
-}
+// func (self *Stack[T]) grow() {
+// 	last := self.raw
+// 	self.raw = make([]T, self.size*2)
+// 	copy(last, self.raw)
+// }
 
 func (self *Stack[T]) Push(v T) {
 	if self.ptr+1 >= len(self.raw) {
-		self.grow()
+		panic("Stack overflow")
 	}
 
 	self.ptr++
