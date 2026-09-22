@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"github.com/charmbracelet/log"
 	. "github.com/leandrolopesm/eunuch/core"
 	. "github.com/leandrolopesm/eunuch/engine"
 	"github.com/leandrolopesm/eunuch/util"
@@ -54,8 +53,22 @@ func RegisterSelf(eng *Engine) {
 	eng.AddFunc("set-car!"     , Builtin{ Args: []Type{Symbol},                VarArgs: false, Return: None,   Call: pairSet(0)})
 	eng.AddFunc("set-cdr!"     , Builtin{ Args: []Type{Symbol},                VarArgs: false, Return: None,   Call: pairSet(1)})
 	eng.AddFunc("cons"         , Builtin{ Args: []Type{Any, Any},              VarArgs: false, Return: Pair,   Call: newPair})
-	
-	eng.AddFunc("define"       , Builtin{ Args: []Type{Symbol, Any},           VarArgs: false, Return: None,   Call: define})
+
+	eng.AddFunc(
+		"define",
+		Builtin{
+			Args: []Type{Symbol, Any},
+			VarArgs: false,
+			Return: None,
+			Call: define,
+			Prepare: util.Some[StagingFunc](
+				func(s Scheme, e *Engine) error {
+					e.Push(s.Args[0])
+					e.Evaluate(s.Args[1])
+
+					return nil
+				}),
+		})
 
 	eng.AddFunc(
 		"quote",
@@ -64,12 +77,27 @@ func RegisterSelf(eng *Engine) {
 			VarArgs: false,
 			Return: Any,
 			Call: quote,
-			Prepare: func(s Scheme,e *Engine) error {
-				log.Warnf("")
-				e.Push(MkSymbol(SprintUnit(s.Args[0])))
-				return nil
-			},
-			MustPrepare: true,
+			Prepare: util.Some[StagingFunc](
+				func(s Scheme,e *Engine) error {
+					/*
+					 *	As i understand, (quote) essentially
+					 *	defers evaluation of an expression
+					 *	until the related symbol is used.
+					 *	For example:
+					 *		(define x '(+ 1 y))
+					 *		(define y 3)
+					 *		(display x) // 1 + 3 = 4
+					 *	It would fail to evaluate 'y' but,
+					 *	since it won't be evaluated until it
+					 *	is used, it doesn't fail.
+					 *
+					 *	!! This is how i interpreted the
+					 *	spec and, therefore, is open to critique.
+					 */
+
+					e.Push(s.Args[0])
+					return nil
+				}),
 			},
 		);
 }

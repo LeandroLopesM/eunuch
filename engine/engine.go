@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/log"
 	. "github.com/leandrolopesm/eunuch/core"
 	"github.com/leandrolopesm/eunuch/parser"
+	"github.com/leandrolopesm/eunuch/util"
 	"github.com/logrusorgru/aurora/v4"
 )
 
@@ -21,8 +22,7 @@ type Builtin struct {
 
 	Return Type
 
-	Prepare StagingFunc // Custom function for checking parameters
-	MustPrepare bool
+	Prepare util.Option[StagingFunc] // Custom function for checking parameters
 
 	Call BuiltinExec
 }
@@ -89,7 +89,7 @@ func (self *Engine) ExecuteStr(code string) error {
 	}
 
 	for _, expr := range schemes {
-		if err := self.evalExpr(expr); err != nil {
+		if err := self.Evaluate(expr); err != nil {
 			return formatStackTrace(err)
 		}
 	}
@@ -97,14 +97,14 @@ func (self *Engine) ExecuteStr(code string) error {
 	return nil
 }
 
-func (self *Engine) evalExpr(unit Unit) error {
+func (self *Engine) Evaluate(unit Unit) error {
 	switch unit.Type {
 	case SchemeType: return self.runScheme(unit.Value.(Scheme))
 	case Symbol:
 		if val, err := self.GetVar(unit.Value.(string)); err != nil {
 			return err
-		} else {
-			self.Push(val)
+		} else if err := self.Evaluate(val); err != nil {
+			return err
 		}
 	case Integer, Float , Bool , String , Char, Vector, Pair:
 		self.Push(unit)
@@ -180,33 +180,23 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 
 func (self *Engine) runScheme(scheme Scheme) error {
 	if err := self.checkScheme(scheme); err != nil {
-		return err
+		return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name, aurora.Red(err))
 	}
 
 	fn := self.funcs[scheme.Name] // Function must exist (Already checked with checkScheme)
 	self.saveStack()
 	defer self.loadStack();
 
-	if fn.MustPrepare {
-		if err := fn.Prepare(scheme, self); err != nil {
+	if fun,err := fn.Prepare.Try(); err == nil {
+		if err := fun(scheme, self); err != nil {
 			return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name, aurora.Red(err))
 		}
 	} else {
 		for _, arg := range scheme.Args {
-			self.evalExpr(arg)
+			self.Evaluate(arg)
 		}
 	}
-
-	log.Debugf("== Stack for %s ==", scheme.Name)
-	for i,elem := range self.stack.raw[0:self.stack.ptr] {
-		if elem.Value == nil {
-			break
-		}
-
-		log.Debugf("> Stack %d: %s", i, SprintUnit(elem))
-	}
-	log.Debugf("=============%s===", strings.Repeat("=", len([]rune(scheme.Name))))
-
+	
 	if ret := fn.Call(self); ret != nil {
 		return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name, aurora.Red(ret))
 	}

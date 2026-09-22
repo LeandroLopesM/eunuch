@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"github.com/charmbracelet/log"
 	. "github.com/leandrolopesm/eunuch/core"
 	. "github.com/leandrolopesm/eunuch/engine"
 	"github.com/leandrolopesm/eunuch/util"
@@ -31,6 +32,8 @@ func pairSet(idx int) BuiltinExec {
 func newPair(e *Engine) error {
 	cdr := util.Assert(e.Pop())
 	car := util.Assert(e.Pop())
+
+	log.Debugf("New pair %s", SprintUnit(MkPair(PairVal{car, cdr})));
 
 	e.Push(MkPair(PairVal{ car, cdr }))
 

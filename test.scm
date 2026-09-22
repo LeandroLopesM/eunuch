@@ -1,4 +1,4 @@
-(define bar (cons 123 (cons "X" #\y)))
+(define bar '(cons 123 (cons "X" #\y)))
 
 (display "Bar is " bar)
 (newline)

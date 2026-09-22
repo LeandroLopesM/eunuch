@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -63,4 +64,40 @@ func Assert[T any](a T, err error) T {
 	}
 
 	return a
+}
+
+type Option[T any] struct {
+	val T
+	inUse bool // can't be 'empty' because the default constructor is { nil, false } and would give false-positivies
+}
+
+func (o Option[T]) Unwrap() T {
+	if !o.inUse {
+		panic("Unwrap on nil option")
+	}
+
+	return o.val
+}
+
+func (o Option[T]) Try() (T, error) {
+	var tmp T
+	
+	if !o.inUse {
+		return tmp, errors.New("Empty option")
+	}
+
+	return o.val, nil
+}
+
+func None[T any]() Option[T] {
+	return Option[T]{
+		inUse: false,
+	}
+}
+
+func Some[T any](val T) Option[T] {
+	return Option[T]{
+		val: val,
+		inUse: true,
+	}
 }
