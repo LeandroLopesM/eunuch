@@ -79,21 +79,8 @@ func RegisterSelf(eng *Engine) {
 			Call: quote,
 			Prepare: util.Some[StagingFunc](
 				func(s Scheme,e *Engine) error {
-					/*
-					 *	As i understand, (quote) essentially
-					 *	defers evaluation of an expression
-					 *	until the related symbol is used.
-					 *	For example:
-					 *		(define x '(+ 1 y))
-					 *		(define y 3)
-					 *		(display x) // 1 + 3 = 4
-					 *	It would fail to evaluate 'y' but,
-					 *	since it won't be evaluated until it
-					 *	is used, it doesn't fail.
-					 *
-					 *	!! This is how i interpreted the
-					 *	spec and, therefore, is open to critique.
-					 */
+					// Don't evaluate the argument,
+					// see quote() for why.
 
 					e.Push(s.Args[0])
 					return nil
@@ -102,9 +89,24 @@ func RegisterSelf(eng *Engine) {
 		);
 }
 
+/*
+ *	As i understand, (quote) essentially
+ *	defers evaluation of an expression
+ *	until the related symbol is used.
+ *	For example:
+ *		(define x '(+ 1 y))
+ *		(define y 3)
+ *		(display x) // 1 + 3 = 4
+ *	It would fail to evaluate 'y' but,
+ *	since it won't be evaluated until it
+ *	is used, it doesn't fail.
+ *
+ *	!! This is how i interpreted the
+ *	spec and, therefore, is open to critique.
+ */
 func quote(e *Engine) error {
-	e.Push(util.Assert(e.Pop()))
 
+	e.Push(util.Assert(e.Pop()))
 	return nil
 }
 
