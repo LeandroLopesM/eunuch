@@ -70,6 +70,15 @@ type Unit struct {
 	Value any
 }
 
+// For user-defined types.
+// Be very careful using since a lot of functions accept 'Any'
+// but then subsequently unwrap it, causing a panic
+func MkCustom(v any) Unit { 
+	return Unit{
+		Type:  Any,
+		Value: v,
+	}
+}
 func MkInt(v int64) Unit {
 	return Unit{
 		Type:  Integer,
