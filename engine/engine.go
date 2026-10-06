@@ -33,6 +33,8 @@ type Engine struct {
 	stack        Stack[Unit]
 	stackHistory Stack[int] // Defines the lower bounds for the current stackPtr
 
+	currentFn util.Option[Scheme]
+
 	vars  map[string](Unit)
 	funcs map[string](Builtin)
 }
@@ -47,7 +49,7 @@ func New() Engine {
 		vars:  make(map[string]Unit),
 		funcs: make(map[string]Builtin),
 	}
-	
+
 	return ret
 }
 
@@ -76,7 +78,7 @@ func (self *Engine) ExecuteStr(code string) error {
 		self.file = "<anonymous>"
 	}
 
-	schemes, err := parser.Lex(self.file, code)
+	schemes, err := parser.ParseFile(self.file, code)
 
 	if err != nil {
 		return err
@@ -129,32 +131,34 @@ func (self *Engine) SetVar(name string, val Unit) {
 
 func (self *Engine) checkScheme(scheme Scheme) error {
 	var actualFn Builtin
-	if fn, ok := self.funcs[scheme.Name]; !ok {
-		return fmt.Errorf("Undefined function '%s'", scheme.Name)
+	if fn, ok := self.funcs[scheme.Name()]; !ok {
+		return fmt.Errorf("Undefined function '%s'", scheme.Name())
 	} else {
 		actualFn = fn
 	}
 
-	if len(scheme.Args) != len(actualFn.Args) && !actualFn.VarArgs {
-		return fmt.Errorf("Scheme '%s': Expected %d args, got %d", scheme.Name, len(actualFn.Args), len(scheme.Args))
+	schemeParams := scheme.Params()
+
+	if len(schemeParams) != len(actualFn.Args) && !actualFn.VarArgs {
+		return fmt.Errorf("Scheme '%s': Expected %d args, got %d", scheme.Name(), len(actualFn.Args), len(schemeParams))
 	}
 
 	idx := 0
 	for range actualFn.Args {
-		inType := scheme.Args[idx].Type
+		inType := schemeParams[idx].Type
 
-		if scheme.Args[idx].Type == SchemeType {
-			asScheme := scheme.Args[idx].Value.(Scheme)
+		if schemeParams[idx].Type == SchemeType {
+			asScheme := schemeParams[idx].Value.(Scheme)
 			if e := self.checkScheme(asScheme); e != nil {
 				return e
 			}
 
 			// If the function exists, use it's return value as the type
-			inType = self.funcs[asScheme.Name].Return
-		
+			inType = self.funcs[asScheme.Name()].Return
+
 		// If the passed argument is a symbol and we dont want a symbol, get its actual type
-		} else if scheme.Args[idx].Type == Symbol && !actualFn.Args[idx].Matches(Symbol) {
-			if v,e := self.GetVar(scheme.Args[idx].Value.(string)); e != nil {
+		} else if schemeParams[idx].Type == Symbol && !actualFn.Args[idx].Matches(Symbol) {
+			if v,e := self.GetVar(schemeParams[idx].Value.(string)); e != nil {
 				return e
 			} else {
 				inType = v.Type
@@ -164,7 +168,7 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 		if !actualFn.Args[idx].Matches(inType) {
 			return fmt.Errorf(
 				"Incorrect argument type for '%s'. Expected '%s' got '%s'",
-				scheme.Name,
+				scheme.Name(),
 				TypeNames[actualFn.Args[idx]],
 				TypeNames[inType],
 			)
@@ -178,27 +182,37 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 	return nil
 }
 
+func (self *Engine) error(msg string, args... any) error {
+	if self.currentFn.IsSome() {
+		scheme := self.currentFn.Unwrap()
+		return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name(), aurora.Red(fmt.Sprintf(msg, args...)))
+	}
+	return fmt.Errorf("%s", aurora.Red(fmt.Sprintf(msg, args...)))
+}
+
 func (self *Engine) runScheme(scheme Scheme) error {
 	if err := self.checkScheme(scheme); err != nil {
-		return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name, aurora.Red(err))
+		return self.error("%s", err)
 	}
 
-	fn := self.funcs[scheme.Name] // Function must exist (Already checked with checkScheme)
+	self.currentFn = util.Some(scheme)
+
+	fn := self.funcs[scheme.Name()] // Function must exist (Already checked with checkScheme)
 	self.saveStack()
 	defer self.loadStack();
 
 	if fun,err := fn.Prepare.Try(); err == nil {
 		if err := fun(scheme, self); err != nil {
-			return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name, aurora.Red(err))
+			return self.error("%s", err)
 		}
 	} else {
 		for _, arg := range scheme.Args {
 			self.Evaluate(arg)
 		}
 	}
-	
+
 	if ret := fn.Call(self); ret != nil {
-		return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name, aurora.Red(ret))
+		return self.error("%s", ret)
 	}
 
 	return nil

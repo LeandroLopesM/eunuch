@@ -89,6 +89,10 @@ func (o Option[T]) Try() (T, error) {
 	return o.val, nil
 }
 
+func (o Option[T]) IsSome() bool {
+	return o.inUse
+}
+
 func None[T any]() Option[T] {
 	return Option[T]{
 		inUse: false,
