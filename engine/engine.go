@@ -101,24 +101,23 @@ func (self *Engine) ExecuteStr(code string) error {
 
 func (self *Engine) Evaluate(unit Unit) error {
 	switch unit.Type {
-	case SchemeType: return self.runScheme(unit.Value.(Scheme))
+	case SchemeType:
+		return self.runScheme(unit.Value.(Scheme))
 	case Symbol:
 		if val, err := self.GetVar(unit.Value.(string)); err != nil {
 			return err
 		} else if err := self.Evaluate(val); err != nil {
 			return err
 		}
-	case Integer, Float , Bool , String , Char, Vector, Pair:
-		self.Push(unit)
 	default:
-		panic(fmt.Sprintf("Unknown unit type %d", unit.Type))
+		self.Push(unit)
 	}
 
 	return nil
 }
 
 func (self *Engine) GetVar(name string) (Unit, error) {
-	if v,ok := self.vars[name]; !ok {
+	if v, ok := self.vars[name]; !ok {
 		return Unit{}, fmt.Errorf("Undefined variable '%s'", name)
 	} else {
 		return v, nil
@@ -126,7 +125,7 @@ func (self *Engine) GetVar(name string) (Unit, error) {
 }
 
 func (self *Engine) SetVar(name string, val Unit) {
-	self.vars[name] = val;
+	self.vars[name] = val
 }
 
 func (self *Engine) checkScheme(scheme Scheme) error {
@@ -156,9 +155,9 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 			// If the function exists, use it's return value as the type
 			inType = self.funcs[asScheme.Name()].Return
 
-		// If the passed argument is a symbol and we dont want a symbol, get its actual type
+			// If the passed argument is a symbol and we dont want a symbol, get its actual type
 		} else if schemeParams[idx].Type == Symbol && !actualFn.Args[idx].Matches(Symbol) {
-			if v,e := self.GetVar(schemeParams[idx].Value.(string)); e != nil {
+			if v, e := self.GetVar(schemeParams[idx].Value.(string)); e != nil {
 				return e
 			} else {
 				inType = v.Type
@@ -182,10 +181,10 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 	return nil
 }
 
-func (self *Engine) error(msg string, args... any) error {
+func (self *Engine) error(msg string, args ...any) error {
 	if self.currentFn.IsSome() {
 		scheme := self.currentFn.Unwrap()
-		return fmt.Errorf("%s %s: %s", scheme.Position.ToString(), scheme.Name(), aurora.Red(fmt.Sprintf(msg, args...)))
+		return fmt.Errorf("%s (%s): %s", scheme.Position.ToString(), scheme.Name(), aurora.Red(fmt.Sprintf(msg, args...)))
 	}
 	return fmt.Errorf("%s", aurora.Red(fmt.Sprintf(msg, args...)))
 }
@@ -197,17 +196,21 @@ func (self *Engine) runScheme(scheme Scheme) error {
 
 	self.currentFn = util.Some(scheme)
 
-	fn := self.funcs[scheme.Name()] // Function must exist (Already checked with checkScheme)
-	self.saveStack()
-	defer self.loadStack();
+	// Function must exist (Already checked with checkScheme)
+	fn := self.funcs[scheme.Name()]
 
-	if fun,err := fn.Prepare.Try(); err == nil {
-		if err := fun(scheme, self); err != nil {
+	self.saveStack()
+	defer self.loadStack()
+
+	if prepFun, err := fn.Prepare.Try(); err == nil {
+		if err := prepFun(scheme, self); err != nil {
 			return self.error("%s", err)
 		}
 	} else {
-		for _, arg := range scheme.Args {
-			self.Evaluate(arg)
+		for _, arg := range scheme.Params() {
+			if err := self.Evaluate(arg); err != nil {
+				return self.error("%s", err.Error())
+			}
 		}
 	}
 
@@ -215,17 +218,19 @@ func (self *Engine) runScheme(scheme Scheme) error {
 		return self.error("%s", ret)
 	}
 
+	self.currentFn = util.None[Scheme]()
+
 	return nil
 }
 
 func (self *Engine) AddFunc(name string, fn Builtin) error {
 	for k := range self.funcs {
 		if k == name {
-			return fmt.Errorf("Attemt to redeclare function %s", name)
+			return fmt.Errorf("Attempt to redeclare function %s", name)
 		}
 	}
 
-	self.funcs[name] = fn;
+	self.funcs[name] = fn
 
 	return nil
 }
