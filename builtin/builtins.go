@@ -83,7 +83,7 @@ func RegisterSelf(eng *Engine) {
 					// Don't evaluate the argument,
 					// see quote() for why.
 
-					e.Push(s.Args[0])
+					e.Push(s.Args[1])
 					return nil
 				}),
 		},

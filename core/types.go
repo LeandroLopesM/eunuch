@@ -47,7 +47,9 @@ var TypeNames = map[Type](string){
 type Type int
 
 const (
-	SchemeType Type = iota
+	Null Type = iota // default type for anything, ignored
+
+	SchemeType
 	Symbol
 	Integer
 	Float
