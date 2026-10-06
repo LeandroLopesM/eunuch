@@ -18,8 +18,8 @@ func SprintUnit(unit Unit) string {
 	switch unit.Type {
 	case SchemeType:
 		asScheme := unit.Value.(Scheme)
-		var ret string = fmt.Sprintf("(%s", asScheme.Name)
-		for i := range asScheme.Args {
+		var ret string = fmt.Sprintf("(%s", asScheme.Name())
+		for i := range asScheme.Params() {
 			ret += fmt.Sprintf(" %s", SprintUnit(asScheme.Args[i]))
 		}
 		return ret + ")"
@@ -58,8 +58,8 @@ func debugUnit(unit Unit, depth int) {
 	switch unit.Type {
 	case SchemeType:
 		asGroup := unit.Value.(Scheme)
-		log.Debugf("%sScheme '%s'", repeat(depth), asGroup.Name)
-		for _, member := range asGroup.Args {
+		log.Debugf("%sScheme '%s'", repeat(depth), asGroup.Name())
+		for _, member := range asGroup.Params() {
 			debugUnit(member, depth+1)
 		}
 	case Symbol:

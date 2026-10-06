@@ -11,7 +11,11 @@ type Scheme struct {
 }
 
 func (s *Scheme) Params() []Unit {
-	return s.Args[0:];
+	if len(s.Args) == 0 {
+		return []Unit{}
+	}
+
+	return s.Args[1:]
 }
 
 func (s Scheme) Name() string {
@@ -26,18 +30,18 @@ type PairVal = [2]Unit
 type VectorVal = []Unit
 
 func (pos Position) ToString() string {
-	return fmt.Sprintf("%s:%d", pos.File, pos.Line)
+	return fmt.Sprintf("%s:%d:%d", pos.File, pos.Line, pos.Char)
 }
 
 var TypeNames = map[Type](string){
-	Symbol:   "Symbol",
+	Symbol:  "Symbol",
 	Integer: "Integer",
 	Float:   "Float",
 	Bool:    "Bool",
 	String:  "String",
-	Char:  "Char",
+	Char:    "Char",
 	Vector:  "Vector",
-	Pair:  "Pair",
+	Pair:    "Pair",
 }
 
 type Type int
@@ -71,8 +75,8 @@ func (tf Type) Matches(ty Type) bool {
 }
 
 type Position struct {
-	Line int
-	File string
+	Line, Char int
+	File       string
 }
 
 type Unit struct {
@@ -84,13 +88,13 @@ type Unit struct {
 // For user-defined types.
 // Be very careful using since a lot of functions accept 'Any'
 // but then subsequently unwrap it, causing a panic
-func MkCustom(v any) Unit { 
+func MkCustom(v any) Unit {
 	return Unit{
 		Type:  Any,
 		Value: v,
 	}
 }
-func MkScheme(v Scheme) Unit { 
+func MkScheme(v Scheme) Unit {
 	return Unit{
 		Type:  SchemeType,
 		Value: v,
@@ -133,13 +137,13 @@ func MkChar(v rune) Unit {
 	}
 }
 func MkVector(v []Unit) Unit {
-	return Unit {
+	return Unit{
 		Type:  Vector,
 		Value: v,
 	}
 }
 func MkPair(v PairVal) Unit {
-	return Unit {
+	return Unit{
 		Type:  Pair,
 		Value: v,
 	}
