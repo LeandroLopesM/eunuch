@@ -1,277 +1,299 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
+	"slices"
 	"strconv"
-	"strings"
 	"unicode"
 
-	"github.com/charmbracelet/log"
 	. "github.com/leandrolopesm/eunuch/core"
 )
 
-type Lexer struct {
-	iter Iterator[rune]
-	line, lastLineOff int
+type Parser struct {
+	pos int
+	input []rune
+
 	file string
 }
 
-func (lex *Lexer) Error(msg string) error {
-	return fmt.Errorf("%s:%v:%v: %v", lex.file, lex.line, lex.iter.Tell() - lex.lastLineOff, msg)
-}
+func (p *Parser) currLine() int {
+	nl := 0
 
-func Lex(file, raw string) ([]Unit, error) {
-	lex := Lexer {
-		iter: NewIterator([]rune(raw)),
-		line: 1,
-		file: file,
+	for pos,char := range p.input {
+		if (char == '\n' || pos + 1 == len(p.input)) && pos > p.pos {
+			nl = pos
+			break
+		}
 	}
 
-	var out []Unit
+	return nl
+}
+
+func (p *Parser) currPos() Position {
+	return Position{
+		Line: p.currLine(),
+		File: p.file,
+	}
+}
+
+func (p *Parser) err(msg string, args ...any) error {
+	lastNL := p.currLine()
+
+	return fmt.Errorf("%d:%d: %s", p.pos, lastNL, fmt.Sprintf(msg, args...))
+}
+
+func (p *Parser) next() rune {
+	if p.pos >= len(p.input) {
+		return rune(0)
+	}
+
+	return p.input[p.pos]
+}
+
+func (p *Parser) rewind(howMuch int) {
+	p.pos -= howMuch
+}
+
+func (p *Parser) StartsWith(prefix string) bool {
+	trueStr := string(p.input[p.pos:])
+	if len(trueStr) < len(prefix) {
+		return false
+	}
+
+	for i := range prefix {
+		if prefix[i] != trueStr[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (p *Parser) expect(what string) {
+	if (p.StartsWith(what)) {
+		p.pos += len(what)
+	} else {
+		panic(fmt.Sprintf("Parser:expect failed, expected %s, got %s", what, string(p.input[p.pos:])))
+	}
+}
+
+func (p *Parser) EOF() bool {
+	return p.pos >= len(p.input)
+}
+
+func (p *Parser) consume() rune {
+	p.pos += 1
+	return p.input[p.pos - 1]
+}
+
+func (p *Parser) consumeWhile(condition func(rune) bool) string {
+	var buffer []rune
+
+	for (!p.EOF() && condition(p.next())) {
+		buffer = append(buffer, p.consume())
+	}
+
+	return string(buffer)
+}
+
+func (p *Parser) consumeWhitespace() {
+	p.consumeWhile(unicode.IsSpace)
+}
+
+func (p *Parser) parseName() string {
+	return p.consumeWhile(func(c rune) bool { return unicode.IsLetter(c) || unicode.IsDigit(c)})
+}
+
+// ============================================================
+// SCHEME PARSER
+// ============================================================
+// Very rough EBNF Grammar
+// ============================================================
+// File 	  := (Expression)*
+//      	  | ';' (Any)* '\n';
+// Expression := Scheme
+//			  | '#' Tag
+//			  | Numeric
+//			  | String
+//			  | Symbol
+//			  | Scheme;
+//
+// Scheme	  := '(' IDENT (Expression)* ')';
+// Tag	  	  := '\\' CHAR
+// 			  |  't' | 'f';
+//
+// Numeric	  := Float | Int;
+// Float	  := '.' NUMBER | NUMBER '.' NUMBER | NUMBER '.';
+// Int		  := NUMBER;
+// ============================================================
+
+func ParseFile(fileName, fileContent string) ([]Unit, error) {
+	parser := Parser {
+		pos: 0,
+		input: []rune(fileContent),
+		file: fileName,
+	}
+
+	var file []Unit
+	for !parser.EOF() {
+		parser.consumeWhitespace()
+
+		if val, err := parser.parseExpression(); err != nil {
+			return []Unit{}, err
+		} else {
+			file = append(file, val)
+		}
+	}
+
+	return file, nil
+}
+
+func (p *Parser) parseExpression() (Unit, error) {
+	tryAgain:
+	switch p.next() {
+	case ';':
+		p.consumeWhile(func(a rune) bool { return a != '\n' })
+		p.expect("\n")
+		goto tryAgain
+	
+	case '#':
+		return p.parseLiteral();
+	
+	case '.':
+		return p.parseFloat();
+
+	case '(':
+		return p.parseScheme();
+
+	default:
+		switch {
+			case unicode.IsDigit(p.next()):
+				return p.parseInt()
+			
+			case unicode.IsSpace(p.next()):
+				p.consumeWhitespace();
+				goto tryAgain
+
+			default:
+				return p.parseSymbol()
+		}
+	}
+}
+
+func (p *Parser) parseScheme() (Unit, error) {
+	p.expect("(")
+	out := Scheme {}
+
+	out.Position = p.currPos()
 
 	for {
-		if val, err := lex.parseUnit(); err != nil {
-			if err == iterEnd {
-				return out, nil
-			}
-
-			return out, err
-		} else {
-			out = append(out, val)
+		if p.next() == ')' {
+			_ = p.consume()
+			break
 		}
-	}
-}
 
-var iterEnd = errors.New("Iterator ended")
-var schemeEnd = errors.New("Scheme ended (')')")
-
-func (lex *Lexer) parseUnit() (Unit, error) {
-start:
-	curr, err := lex.iter.Curr();
-
-	if err == nil {
-		switch curr {
-		case ';':
-			lex.skipComment();
-			goto start
-		case '\n':
-			lex.iter.Consume()
-			lex.line++
-			lex.lastLineOff = lex.iter.Tell()
-			goto start;
-		case '"':
-			return lex.parseString();
-		case '(':
-			return lex.parseScheme();
-		case ')':
-			return Unit{}, schemeEnd;
-		case '#':
-			return lex.parseTag(), nil;
-		case '\'':
-			return lex.parseQuote();
-		default:
-			switch {
-			case unicode.IsDigit(curr):
-				return lex.parseNum()
-			case unicode.IsSpace(curr):
-				lex.iter.Consume();
-				goto start;
-			default:
-				return lex.parseSymbol(), nil
-			}
-		}
-	}
-
-	return Unit{}, iterEnd
-}
-
-func (lex *Lexer) parseString() (Unit, error) {
-	val, err := lex.iter.Next();
-	var buffer []rune
-	for err == nil {
-		if val == '"' && lex.iter.PrevOr(' ') != '\\' {
-			lex.iter.Consume();
-			lex.iter.Consume();
-
-			return Unit {
-				Type: String,
-				Value: string(buffer),
-			}, nil
-		} 
-		buffer = append(buffer, val)
-
-		val, err = lex.iter.Next();
-	}
-
-	return Unit{}, lex.Error("Unclosed string");
-}
-
-func (lex *Lexer) parseQuote() (Unit, error) {
-	lex.iter.Consume() // eat '
-	
-	if val, err := lex.parseUnit(); err != nil {
-		return Unit{}, err
-	} else {
-		return Unit {
-			Type: SchemeType,
-			Value: Scheme {
-				Name: "quote",
-				Args: []Unit {
-					val,
-				},
-			},
-		}, nil
-	}
-}
-
-func (lex *Lexer) parseScheme() (Unit, error) {
-	lex.iter.Consume() // Discard (
-	out := Scheme {
-		Name: lex.parseSymbol().Value.(string),
-		Position: Position{
-			Line: lex.line,
-			Char: lex.iter.Tell() - lex.lastLineOff,
-			File: lex.file,
-		},
-	}
-
-	_, err := lex.iter.Curr()
-	
-	var val Unit
-	for err == nil {
-		if val, err = lex.parseUnit(); err != nil {
-			if err == schemeEnd {
-				lex.iter.Consume()
-				
-				return Unit{
-					Type: SchemeType,
-					Value: out,
-				}, nil
-			}
-
-			return Unit{}, err
+		if val, err := p.parseExpression(); err != nil {
+			return MkScheme(Scheme{}), err
 		} else {
 			out.Args = append(out.Args, val)
 		}
-
-		// _, err = lex.iter.Next();
 	}
 
-	return Unit{}, lex.Error(fmt.Sprintf("Scheme '%s': Missing closing ')'", out.Name))
+	return MkScheme(out), nil
 }
 
-func (lex *Lexer) parseTag() Unit {
-	asIdent := lex.parseSymbol(); // #...
-	asStr := asIdent.Value.(string); // #...
-
-	if len(asStr) > 1 {
-		switch []rune(asStr)[1] {
-		case '\\':
-			return lex.parseChar(asStr);
-		case 't', 'f':
-			return lex.parseBool(asStr[1:]);
-		}
-	}
-
-	return asIdent
+func isHex(c rune) bool {
+	return unicode.IsDigit(c) || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
 }
 
-func (lex *Lexer) parseBool(str string) Unit {
-	return Unit{
-		Type: Bool,
-		Value: str == "t",
-	}
-}
-
-func (lex *Lexer) parseChar(str string) Unit {
-	var char rune
-	switch str[2:] {
-	case "newline":
-		char = '\n'
-	case "space":
-		char = ' '
-	default:
-		if len(str[2:]) > 1 {
-			log.Warnf("Unknown character expr '%s', using '%c'", str, str[2])
-		}
-
-		char = []rune(str)[2]
-	}
-
-	return Unit{
-		Type: Char,
-		Value: char,
-	}
-}
-
-func (lex *Lexer) parseNum() (Unit, error) {
-	num := lex.parseSymbol().Value.(string)
-
-	if strings.Contains(num, ".") {
-		if val, err := strconv.ParseFloat(num, 64); err != nil {
-			return Unit{}, lex.Error(fmt.Sprintf("Invalid float number '%s'", num))
-		} else {
-			return Unit {
-				Type: Float,
-				Value: val,
-			}, nil
-		}
-	}
-
+func (p *Parser) parseInt() (Unit, error) {
 	radix := 10
-	if strings.ContainsAny(num, "ABCDEFabcdef") {
+	if (p.next() == 'x') {
 		radix = 16
 	}
 
-	if val, err := strconv.ParseInt(num,radix, 64); err != nil {
-		return Unit{}, lex.Error(fmt.Sprintf("Invalid integer '%s'", num))
+	buffer := p.consumeWhile(isHex)
+	if (p.next() == '.') {
+		p.rewind(len(buffer))
+		return p.parseFloat()
+	}
+
+	if val,err := strconv.ParseInt(buffer, radix, 64); err != nil {
+		return MkInt(0), p.err("Invalid integer literal %s", string(buffer))
 	} else {
-		return Unit {
-			Type: Integer,
-			Value: val,
-		}, nil
+		return MkInt(val), nil
 	}
 }
 
-func (lex *Lexer) parseSymbol() Unit {
-	var buff []rune
-	nxt, err := lex.iter.Curr()
+func (p *Parser) parseFloat() (Unit, error) {
+	var buffer []rune
+
+	if p.next() == '.' {
+		buffer = append(buffer, '0') // predicate the string so .123 is 0.123
+	} else {
+		buffer = []rune(p.consumeWhile(unicode.IsDigit))
+		p.expect(".")
+	}
+
+	if !unicode.IsDigit(p.next()) {
+		buffer = append(buffer, '0') // suffix the string so 123. is 123.0
+	} else {
+		buffer = slices.Concat(buffer, []rune(p.consumeWhile(unicode.IsDigit)))
+	}
+
+	if val, err := strconv.ParseFloat(string(buffer), 64); err != nil {
+		return MkFloat(0.), p.err("Invalid float literal %s", string(buffer))
+	} else {
+		return MkFloat(val), nil
+	}
+
+}
+
+func (p *Parser) parseLiteral() (Unit, error) {
+	p.expect("#");
+
+	switch (p.next()) {
+	case '\\':
+		return p.parseChar();
+	case 't', 'f':
+		return p.parseBool();
+	}
+
+	p.rewind(1)
+	return p.parseSymbol();
+}
+
+func (p *Parser) parseSymbol() (Unit, error) {
+	return MkSymbol(p.consumeWhile(isSymbolChar)), nil
+}
+
+func isSymbolChar(c rune) bool {
+	return c != '(' && c != ')' && !unicode.IsSpace(c)
+}
+
+func (p *Parser) parseBool() (Unit, error) {
+	val := p.consume();
+
+	return MkBool(val == 't'), nil
+}
+
+func (p *Parser) parseChar() (Unit, error) {
+	p.expect("\\")
 	
-	for err == nil {
-		buff = append(buff, nxt)
+	charName := p.parseName()
 
-		if nxt,err = lex.iter.Next(); err != nil {
-			lex.iter.Consume()
-			break
-		} else if !isIdentChar(nxt) {
-			// _,_ = lex.iter.Prev()
-			break
+	switch charName {
+	case "space":
+		return MkChar(' '), nil
+	case "tab":
+		return MkChar('\t'), nil
+	case "\\n":
+		return MkChar('\n'), nil
+	default:
+		if len(charName) > 1 {
+			return MkChar(0), p.err("Unknown character literal %v", charName)
 		}
-	}
 
-	return Unit {
-		Type: Symbol,
-		Value: string(buff),
-	}
-}
-
-func isIdentChar(char rune) bool {
-	return !(unicode.IsSpace(char) || char == ')' || char == '(')
-}
-
-func (lex *Lexer) skipComment() {
-	curr, err := lex.iter.Curr()
-	var buff []rune
-	for err == nil {
-		if curr, err = lex.iter.Next(); err != nil {
-			return;
-		} else {
-			if curr == '\n' {
-				return;
-			}
-
-			buff = append(buff, curr)
-		}
+		return MkChar(([]rune(charName))[0]), nil
 	}
 }

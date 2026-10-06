@@ -5,17 +5,28 @@ import (
 )
 
 type Scheme struct {
-	Name string
 	Args []Unit
 
 	Position Position
+}
+
+func (s *Scheme) Params() []Unit {
+	return s.Args[0:];
+}
+
+func (s Scheme) Name() string {
+	if len(s.Args) == 0 {
+		return ""
+	} else {
+		return s.Args[0].Value.(string)
+	}
 }
 
 type PairVal = [2]Unit
 type VectorVal = []Unit
 
 func (pos Position) ToString() string {
-	return fmt.Sprintf("%s:%d:%d", pos.File, pos.Line, pos.Char)
+	return fmt.Sprintf("%s:%d", pos.File, pos.Line)
 }
 
 var TypeNames = map[Type](string){
@@ -60,8 +71,8 @@ func (tf Type) Matches(ty Type) bool {
 }
 
 type Position struct {
-	Line, Char int
-	File       string
+	Line int
+	File string
 }
 
 type Unit struct {
@@ -76,6 +87,12 @@ type Unit struct {
 func MkCustom(v any) Unit { 
 	return Unit{
 		Type:  Any,
+		Value: v,
+	}
+}
+func MkScheme(v Scheme) Unit { 
+	return Unit{
+		Type:  SchemeType,
 		Value: v,
 	}
 }
