@@ -40,15 +40,17 @@ func main() {
 func runREPL(lispEngine engine.Engine) {
 	var editor readline.Editor
 
-	for {
+	loop: for {
 		if text, err := editor.ReadLine(context.Background()); err != nil {
-			if err.Error() == "EOF" {
-				break
-			} else if err.Error() == "^C" {
-				continue
+			switch err.Error() {
+			case "EOF":
+				break loop
+			case "^C":
+				continue loop
+			default:
+				log.Errorf("Failed to read input: %s", err)
+				break loop
 			}
-
-			log.Errorf("Failed to read input: %s", err)
 		} else {
 			if err := lispEngine.ExecuteStr("REPL", text); err != nil {
 				fmt.Print(aurora.Red("Execution failed:\n"), err)

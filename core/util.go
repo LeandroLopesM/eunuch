@@ -18,11 +18,13 @@ func SprintUnit(unit Unit) string {
 	switch unit.Type {
 	case SchemeType:
 		asScheme := unit.Value.(Scheme)
-		var ret = "(" + asScheme.Name()
+		var ret strings.Builder
+		ret.WriteString("(" + asScheme.Name())
+
 		for i := range asScheme.Params() {
-			ret += fmt.Sprintf(" %s", SprintUnit(asScheme.Args[i]))
+			ret.WriteString(fmt.Sprintf(" %s", SprintUnit(asScheme.Args[i])))
 		}
-		return ret + ")"
+		return ret.String() + ")"
 	case Symbol:
 		return unit.Value.(string)
 	case String:
@@ -40,15 +42,16 @@ func SprintUnit(unit Unit) string {
 		return fmt.Sprintf("(%v . %v)", SprintUnit(asPair[0]), SprintUnit(asPair[1]))
 	case Vector:
 		asVec := unit.Value.(VectorVal)
-		var ret string
+		var ret strings.Builder
 		for i := range asVec {
 			if i != 0 {
-				ret += SprintUnit(asVec[i])
+				ret.WriteString(SprintUnit(asVec[i]))
 			} else {
-				ret = "#(" + SprintUnit(asVec[i])
+				ret.WriteString("#(")
+				ret.WriteString(SprintUnit(asVec[i]))
 			}
 		}
-		return ret + ")"
+		return ret.String() + ")"
 	default:
 		panic(fmt.Sprintf("Unknown type %v", unit))
 	}
@@ -77,17 +80,18 @@ func debugUnit(unit Unit, depth int) {
 		log.Debugf("%sPair (%v . %v)", repeat(depth), SprintUnit(asPair[0]), SprintUnit(asPair[1]))
 	case Vector:
 		asVec := unit.Value.(VectorVal)
-		var ret string
+		var ret strings.Builder
 		for i := range asVec {
 			if i != 0 {
-				ret += SprintUnit(asVec[i])
+				ret.WriteString(SprintUnit(asVec[i]))
 			} else {
-				ret += "#(" + SprintUnit(asVec[i])
+				ret.WriteString("#(")
+				ret.WriteString(SprintUnit(asVec[i]))
 			}
 		}
-		ret += ")"
+		ret.WriteString(")")
 
-		log.Debugf("%sVector %s", repeat(depth), ret)
+		log.Debugf("%sVector %s", repeat(depth), ret.String())
 	default:
 		log.Warnf("%sUnknown %v", repeat(depth), unit.Value)
 	}

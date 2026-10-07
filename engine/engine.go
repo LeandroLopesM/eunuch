@@ -28,8 +28,6 @@ type Builtin struct {
 }
 
 type Engine struct {
-	file string
-
 	stack        Stack[Unit]
 	stackHistory Stack[int] // Defines the lower bounds for the current stackPtr
 
@@ -53,17 +51,17 @@ func New() Engine {
 
 func formatStackTrace(strace error) error {
 	calls := strings.Split(strace.Error(), "|")
-	var out string
-
+	var out  = strings.Builder {}
 	var idx = 0
+
 	for range calls[:len(calls)-1] {
-		out += fmt.Sprintf("%s%s\n", strings.Repeat(". ", idx+1), calls[idx])
+		out.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat(". ", idx+1), calls[idx]))
 		idx++
 	}
 
-	out += fmt.Sprintf("%s%s", strings.Repeat(". ", idx+1), aurora.Red(calls[len(calls)-1]))
+	out.WriteString(fmt.Sprintf("%s%s", strings.Repeat(". ", idx+1), aurora.Red(calls[len(calls)-1])))
 
-	return errors.New(out)
+	return errors.New(out.String())
 }
 
 func (eng *Engine) ExecuteFile(file string) error {
@@ -187,7 +185,7 @@ func (eng *Engine) error(msg string, args ...any) error {
 }
 
 func (eng *Engine) schemeError(currScheme Scheme, err error) error {
-	return fmt.Errorf("%s (%s):|%s", currScheme.Position.ToString(), currScheme.Name(), err)
+	return fmt.Errorf("%s (%s):|%w", currScheme.Position.ToString(), currScheme.Name(), err)
 }
 
 func (eng *Engine) runScheme(scheme Scheme) error {

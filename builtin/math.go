@@ -37,25 +37,25 @@ func OrdOp(kind rune) BuiltinExec {
 		switch overallType {
 		case Float:
 			var curr = numAsF(nums[0])
-			for _, v := range nums {
+			for _, num := range nums {
 				if util.If(kind == '>',
-					numAsF(v) > curr,
-					numAsF(v) < curr,
+					numAsF(num) > curr,
+					numAsF(num) < curr,
 				) {
-					curr = numAsF(v)
+					curr = numAsF(num)
 				}
 			}
 
 			eng.Push(MkFloat(curr))
 		default:
 			var curr = nums[0].Value.(int64)
-			for _, v := range nums {
+			for _, num := range nums {
 				if util.If(
 					kind == '>',
-					v.Value.(int64) > curr,
-					v.Value.(int64) < curr,
+					num.Value.(int64) > curr,
+					num.Value.(int64) < curr,
 				) {
-					curr = v.Value.(int64)
+					curr = num.Value.(int64)
 				}
 			}
 
@@ -96,31 +96,31 @@ func expt(eng *Engine) error {
 // TODO: (- 4) => -4.
 // TODO: (/ 4) => 1/4.
 func MathOp(kind rune) BuiltinExec {
-	floatOp := func(a float64, b float64) float64 {
+	floatOp := func(lhs float64, rhs float64) float64 {
 		switch kind {
 		case '+':
-			return a + b
+			return lhs + rhs
 		case '-':
-			return a - b
+			return lhs - rhs
 		case '*':
-			return a * b
+			return lhs * rhs
 		case '/':
-			return a / b
+			return lhs / rhs
 		}
 
 		panic(fmt.Sprintf("Undefined operation %c", kind))
 	}
 
-	intOp := func(a int64, b int64) int64 {
+	intOp := func(lhs int64, rhs int64) int64 {
 		switch kind {
 		case '+':
-			return a + b
+			return lhs + rhs
 		case '-':
-			return a - b
+			return lhs - rhs
 		case '*':
-			return a * b
+			return lhs * rhs
 		case '/':
-			return a / b
+			return lhs / rhs
 		}
 
 		panic(fmt.Sprintf("undefined operation %c", kind))
@@ -131,20 +131,20 @@ func MathOp(kind rune) BuiltinExec {
 		var numbers []Unit
 		var outType = Integer // We can be optimistic, right?
 
-		v, err := eng.Pop()
+		nextUnit, err := eng.Pop()
 
 		for err == nil {
-			if !filter.Matches(v.Type) {
-				return fmt.Errorf("expected integer or float, got %s", v.Type.ToString())
+			if !filter.Matches(nextUnit.Type) {
+				return fmt.Errorf("expected integer or float, got %s", nextUnit.Type.ToString())
 			}
 
-			if v.Type == Float {
+			if nextUnit.Type == Float {
 				outType = Float
 			}
 
-			numbers = append(numbers, v)
+			numbers = append(numbers, nextUnit)
 
-			v, err = eng.Pop()
+			nextUnit, err = eng.Pop()
 		}
 
 		switch outType {

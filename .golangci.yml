@@ -17,6 +17,9 @@ linters:
         - noinlineerr
         - ireturn
         - forbidigo
+        - depguard
+        - cyclop
+        - err113
     settings:
         godoclint:
             disable:

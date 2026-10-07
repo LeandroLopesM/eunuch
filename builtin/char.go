@@ -9,13 +9,13 @@ import (
 )
 
 func charOp(op string) BuiltinExec {
-	exec := func (a rune, b rune) bool {
+	exec := func (lhs rune, rhs rune) bool {
 		switch op {
-		case ">": return a > b
-		case "<": return a < b
-		case "=": return a == b
-		case ">=": return a >= b
-		case "<=": return a <= b
+		case ">": return lhs > rhs
+		case "<": return lhs < rhs
+		case "=": return lhs == rhs
+		case ">=": return lhs >= rhs
+		case "<=": return lhs <= rhs
 		}
 
 		panic("Unreachable")
@@ -32,13 +32,13 @@ func charOp(op string) BuiltinExec {
 }
 
 func charCiOp(op string) BuiltinExec {
-	exec := func (a rune, b rune) bool {
+	exec := func (lhs rune, rhs rune) bool {
 		switch op {
-		case ">": return a > b
-		case "<": return a < b
-		case "=": return a == b
-		case ">=": return a >= b
-		case "<=": return a <= b
+		case ">": return lhs > rhs
+		case "<": return lhs < rhs
+		case "=": return lhs == rhs
+		case ">=": return lhs >= rhs
+		case "<=": return lhs <= rhs
 		}
 
 		panic("Unreachable")
