@@ -3,7 +3,6 @@ package lib
 import (
 	"github.com/leandrolopesm/eunuch/core"
 	"github.com/leandrolopesm/eunuch/engine"
-	"github.com/leandrolopesm/eunuch/parser"
 )
 
 /* The primary library API
@@ -24,7 +23,3 @@ type Builtin = engine.Builtin
 type BuiltinExec = engine.BuiltinExec
 type Stack[T any] = engine.Stack[T]
 type StagingFunc = engine.StagingFunc
-
-// Parser API.
-type Parser = parser.Parser
-type Iterator[T any] = parser.Iterator[T]

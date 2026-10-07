@@ -62,10 +62,10 @@ func RegisterSelf(eng *Engine) {
 			Return:  None,
 			Call:    define,
 			Prepare: util.Some[StagingFunc](
-				func(s Scheme, e *Engine) error {
+				func(s Scheme, eng *Engine) error {
 					params := s.Params()
-					e.Push(params[0])
-					return e.Evaluate(params[1])
+					eng.Push(params[0])
+					return eng.Evaluate(params[1])
 				}),
 		})
 
@@ -77,11 +77,11 @@ func RegisterSelf(eng *Engine) {
 			Return:  Any,
 			Call:    quote,
 			Prepare: util.Some[StagingFunc](
-				func(s Scheme, e *Engine) error {
+				func(s Scheme, eng *Engine) error {
 					// Don't evaluate the argument,
 					// see quote() for why.
 
-					e.Push(s.Args[1])
+					eng.Push(s.Args[1])
 					return nil
 				}),
 		},
@@ -103,54 +103,54 @@ func RegisterSelf(eng *Engine) {
  *	!! This is how i interpreted the
  *	spec and, therefore, is open to critique.
  */
-func quote(e *Engine) error {
-	e.Push(util.Assert(e.Pop()))
+func quote(eng *Engine) error {
+	eng.Push(util.Assert(eng.Pop()))
 	return nil
 }
 
-func define(e *Engine) error {
-	value := util.Assert(e.Pop())
-	name := util.Assert(e.Pop())
+func define(eng *Engine) error {
+	value := util.Assert(eng.Pop())
+	name := util.Assert(eng.Pop())
 
-	e.SetVar(name.Value.(string), value)
+	eng.SetVar(name.Value.(string), value)
 	return nil
 }
 
 func isX(which Type) BuiltinExec {
-	return func(e *Engine) error {
-		if val, err := e.Pop(); e != nil {
+	return func(eng *Engine) error {
+		if val, err := eng.Pop(); err != nil {
 			return err
 		} else {
-			e.Push(MkBool(val.Type == which))
+			eng.Push(MkBool(val.Type == which))
 		}
 
 		return nil
 	}
 }
 
-func newline(e *Engine) error {
+func newline(eng *Engine) error {
 	print("\n")
 
 	return nil
 }
 
-func eqv(e *Engine) error {
-	lhs := util.Assert(e.Pop()) // We can assert because the argCount was checked
-	rhs := util.Assert(e.Pop())
+func eqv(eng *Engine) error {
+	lhs := util.Assert(eng.Pop()) // We can assert because the argCount was checked
+	rhs := util.Assert(eng.Pop())
 
 	if lhs.Type != rhs.Type {
-		e.Push(MkBool(false))
+		eng.Push(MkBool(false))
 	}
 
-	e.Push(MkBool(lhs == rhs))
+	eng.Push(MkBool(lhs == rhs))
 	return nil
 }
 
-func display(e *Engine) error {
+func display(eng *Engine) error {
 	var args []Unit
 
 	for {
-		if val, err := e.Pop(); err != nil {
+		if val, err := eng.Pop(); err != nil {
 			break
 		} else {
 			args = append(args, val)

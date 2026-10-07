@@ -9,16 +9,16 @@ import (
 	. "github.com/leandrolopesm/eunuch/core"
 )
 
-type Parser struct {
+type parser struct {
 	pos   int
 	input []rune
 
 	file string
 }
 
-func (p *Parser) currLinePos() (int, int) {
-	nl := 1
-	lastPos := 0
+func (p *parser) currLinePos() (int, int) {
+	lastNewline := 1
+	lastChar := 0
 
 	for pos, char := range p.input {
 		if char == '\n' {
@@ -26,15 +26,15 @@ func (p *Parser) currLinePos() (int, int) {
 				break
 			}
 
-			lastPos = pos
-			nl++
+			lastChar = pos
+			lastNewline++
 		}
 	}
 
-	return nl, p.pos - lastPos
+	return lastNewline, p.pos - lastChar
 }
 
-func (p *Parser) currPos() Position {
+func (p *parser) currPos() Position {
 	line, char := p.currLinePos()
 	return Position{
 		Line: line,
@@ -43,13 +43,13 @@ func (p *Parser) currPos() Position {
 	}
 }
 
-func (p *Parser) err(msg string, args ...any) error {
+func (p *parser) err(msg string, args ...any) error {
 	lastNL, char := p.currLinePos()
 
 	return fmt.Errorf("%s:%d:%d: %s", p.file, lastNL, char, fmt.Sprintf(msg, args...))
 }
 
-func (p *Parser) next() rune {
+func (p *parser) next() rune {
 	if p.pos >= len(p.input) {
 		return rune(0)
 	}
@@ -57,11 +57,11 @@ func (p *Parser) next() rune {
 	return p.input[p.pos]
 }
 
-func (p *Parser) rewind(howMuch int) {
+func (p *parser) rewind(howMuch int) {
 	p.pos -= howMuch
 }
 
-func (p *Parser) StartsWith(prefix string) bool {
+func (p *parser) startsWith(prefix string) bool {
 	trueStr := string(p.input[p.pos:])
 	if len(trueStr) < len(prefix) {
 		return false
@@ -76,24 +76,24 @@ func (p *Parser) StartsWith(prefix string) bool {
 	return true
 }
 
-func (p *Parser) expect(what string) {
-	if p.StartsWith(what) {
+func (p *parser) expect(what string) {
+	if p.startsWith(what) {
 		p.pos += len(what)
 	} else {
-		panic(fmt.Sprintf("Parser:expect failed, expected %s, got %s", what, string(p.input[p.pos:])))
+		panic(fmt.Sprintf("parser:expect failed, expected %s, got %s", what, string(p.input[p.pos:])))
 	}
 }
 
-func (p *Parser) eof() bool {
+func (p *parser) eof() bool {
 	return p.pos >= len(p.input)
 }
 
-func (p *Parser) consume() rune {
-	p.pos += 1
+func (p *parser) consume() rune {
+	p.pos++
 	return p.input[p.pos-1]
 }
 
-func (p *Parser) consumeWhile(condition func(rune) bool) string {
+func (p *parser) consumeWhile(condition func(rune) bool) string {
 	var buffer []rune
 
 	for !p.eof() && condition(p.next()) {
@@ -103,39 +103,40 @@ func (p *Parser) consumeWhile(condition func(rune) bool) string {
 	return string(buffer)
 }
 
-func (p *Parser) consumeWhitespace() {
+func (p *parser) consumeWhitespace() {
 	p.consumeWhile(unicode.IsSpace)
 }
 
-func (p *Parser) parseName() string {
+func (p *parser) parseName() string {
 	return p.consumeWhile(func(c rune) bool { return unicode.IsLetter(c) || unicode.IsDigit(c) })
 }
 
-// ============================================================
-// SCHEME PARSER
-// ============================================================
-// Very rough EBNF Grammar
-// ============================================================
-// File 	  := (Expression)*
-//      	  | ';' (Any)* '\n';
-// Expression := Scheme
-//			  | '#' Tag
-//			  | Numeric
-//			  | String
-//			  | Symbol
-//			  | Scheme;
-//
-// Scheme	  := '(' IDENT (Expression)* ')';
-// Tag	  	  := '\\' CHAR
-// 			  |  't' | 'f';
-//
-// Numeric	  := Float | Int;
-// Float	  := '.' NUMBER | NUMBER '.' NUMBER | NUMBER '.';
-// Int		  := NUMBER;
-// ============================================================
+/* =============================================================
+ * SCHEME PARSER
+ * =============================================================
+ * Very rough EBNF Grammar
+ * =============================================================
+ * File 	  := (Expression)*
+ *      	  | ';' (Any)* '\n';
+ * Expression := Scheme
+ *			  | '#' Tag
+ *			  | Numeric
+ *			  | String
+ *			  | Symbol
+ *			  | Scheme;
+ *
+ * Scheme	  := '(' IDENT (Expression)* ')';
+ * Tag	  	  := '\\' CHAR
+ * 			  |  't' | 'f';
+ *
+ * Numeric	  := Float | Int;
+ * Float	  := '.' NUMBER | NUMBER '.' NUMBER | NUMBER '.';
+ * Int		  := NUMBER;
+ * ============================================================= */
 
+/// ParseFile parses a file given the grammar described above
 func ParseFile(fileName, fileContent string) ([]Unit, error) {
-	parser := Parser{
+	parser := parser{
 		pos:   0,
 		input: []rune(fileContent),
 		file:  fileName,
@@ -145,17 +146,21 @@ func ParseFile(fileName, fileContent string) ([]Unit, error) {
 	for !parser.eof() {
 		parser.consumeWhitespace()
 
-		if val, err := parser.parseExpression(); err != nil {
+		var (
+			unit Unit
+			err  error
+		)
+
+		if unit, err = parser.parseExpression(); err != nil {
 			return []Unit{}, err
-		} else {
-			file = append(file, val)
 		}
+		file = append(file, unit)
 	}
 
 	return file, nil
 }
 
-func (p *Parser) parseExpression() (Unit, error) {
+func (p *parser) parseExpression() (Unit, error) {
 tryAgain:
 	switch p.next() {
 	case ';':
@@ -193,20 +198,25 @@ tryAgain:
 	}
 }
 
-func (p *Parser) parseQuote() (Unit, error) {
+func (p *parser) parseQuote() (Unit, error) {
 	p.consume()
 
-	if val, err := p.parseExpression(); err != nil {
+	var (
+		unit Unit
+		err  error
+	)
+
+	if unit, err = p.parseExpression(); err != nil {
 		return Null, err
-	} else {
-		return MkScheme(Scheme{
-			Args:     slices.Concat([]Unit{MkSymbol("quote"), val}),
-			Position: p.currPos(),
-		}), nil
 	}
+
+	return MkScheme(Scheme{
+		Args:     slices.Concat([]Unit{MkSymbol("quote"), unit}),
+		Position: p.currPos(),
+	}), nil
 }
 
-func (p *Parser) parseString() (Unit, error) {
+func (p *parser) parseString() (Unit, error) {
 	_ = p.consume()
 	start := p.pos
 	str := p.consumeWhile(func(c rune) bool { return c != '"' })
@@ -214,18 +224,19 @@ func (p *Parser) parseString() (Unit, error) {
 	if p.eof() {
 		p.pos = start
 		return Null, p.err("Unclosed string starts here")
-	} else {
-		p.consume()
 	}
+
+	p.consume()
 
 	return MkString(str), nil
 }
 
-func (p *Parser) parseScheme() (Unit, error) {
+func (p *parser) parseScheme() (Unit, error) {
 	p.expect("(")
-	out := Scheme{}
-
-	out.Position = p.currPos()
+	out := Scheme{
+		Position: p.currPos(),
+		Args: []Unit{},
+	}
 
 	for {
 		if p.next() == ')' {
@@ -233,11 +244,16 @@ func (p *Parser) parseScheme() (Unit, error) {
 			break
 		}
 
-		if val, err := p.parseExpression(); err != nil {
+		var (
+			unit Unit
+			err error
+		)
+
+		if unit, err = p.parseExpression(); err != nil {
 			return Null, err
-		} else {
-			out.Args = append(out.Args, val)
 		}
+
+		out.Args = append(out.Args, unit)
 	}
 
 	return MkScheme(out), nil
@@ -247,7 +263,7 @@ func isHex(c rune) bool {
 	return unicode.IsDigit(c) || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
 }
 
-func (p *Parser) parseInt() (Unit, error) {
+func (p *parser) parseInt() (Unit, error) {
 	radix := 10
 	if p.next() == 'x' {
 		radix = 16
@@ -260,13 +276,13 @@ func (p *Parser) parseInt() (Unit, error) {
 	}
 
 	if val, err := strconv.ParseInt(buffer, radix, 64); err != nil {
-		return Null, p.err("Invalid integer literal %s", string(buffer))
+		return Null, p.err("invalid integer literal %s", buffer)
 	} else {
 		return MkInt(val), nil
 	}
 }
 
-func (p *Parser) parseFloat() (Unit, error) {
+func (p *parser) parseFloat() (Unit, error) {
 	var buffer []rune
 
 	if p.next() == '.' {
@@ -289,7 +305,7 @@ func (p *Parser) parseFloat() (Unit, error) {
 	}
 }
 
-func (p *Parser) parseLiteral() (Unit, error) {
+func (p *parser) parseLiteral() (Unit, error) {
 	p.expect("#")
 
 	switch p.next() {
@@ -303,7 +319,7 @@ func (p *Parser) parseLiteral() (Unit, error) {
 	return p.parseSymbol()
 }
 
-func (p *Parser) parseSymbol() (Unit, error) {
+func (p *parser) parseSymbol() (Unit, error) {
 	return MkSymbol(p.consumeWhile(isSymbolChar)), nil
 }
 
@@ -311,13 +327,13 @@ func isSymbolChar(c rune) bool {
 	return c != '(' && c != ')' && !unicode.IsSpace(c)
 }
 
-func (p *Parser) parseBool() (Unit, error) {
+func (p *parser) parseBool() (Unit, error) {
 	val := p.consume()
 
 	return MkBool(val == 't'), nil
 }
 
-func (p *Parser) parseChar() (Unit, error) {
+func (p *parser) parseChar() (Unit, error) {
 	p.expect("\\")
 
 	charName := p.parseName()

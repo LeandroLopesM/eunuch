@@ -8,16 +8,16 @@ import (
 	"github.com/leandrolopesm/eunuch/util"
 )
 
-func stringSet(e *Engine) error {
-	char := util.Assert(e.Pop()).Value.(rune)
-	idx := util.Assert(e.Pop()).Value.(int64)
-	strVarName := util.Assert(e.Pop()).Value.(string)
-	strVar,err := e.GetVar(strVarName)
+func stringSet(eng *Engine) error {
+	char := util.Assert(eng.Pop()).Value.(rune)
+	idx := util.Assert(eng.Pop()).Value.(int64)
+	strVarName := util.Assert(eng.Pop()).Value.(string)
+	strVar,err := eng.GetVar(strVarName)
 
 	if err != nil {
 		return err
 	} else if strVar.Type != String {
-		return fmt.Errorf("expected 'String', got '%s'", TypeNames[strVar.Type])
+		return fmt.Errorf("expected 'String', got '%s'", strVar.Type.ToString())
 	}
 
 	asArr := []rune(strVar.Value.(string))
@@ -27,28 +27,28 @@ func stringSet(e *Engine) error {
 
 	asArr[idx] = char
 
-	e.SetVar(strVarName, MkString(string(asArr)))
+	eng.SetVar(strVarName, MkString(string(asArr)))
 
 	return nil
 }
 
-func stringCreate(e *Engine) error {
-	var strLen = util.Assert(e.Pop()).Value.(int64)
+func stringCreate(eng *Engine) error {
+	var strLen = util.Assert(eng.Pop()).Value.(int64)
 
 	if strLen < 0 {
 		return fmt.Errorf("invalid index %d", strLen)
 	}
 
 	var tmp = make([]rune, strLen)
-	e.Push(MkString(string(tmp)))
+	eng.Push(MkString(string(tmp)))
 
 	return nil
 }
 
-func stringConcat(e *Engine) error {
+func stringConcat(eng *Engine) error {
 	var strs []string
 	for {
-		if val, err := e.Pop(); err != nil {
+		if val, err := eng.Pop(); err != nil {
 			break
 		} else {
 			strs = append(strs, val.Value.(string))
@@ -63,26 +63,26 @@ func stringConcat(e *Engine) error {
 		idx--
 	}
 
-	e.Push(MkString(out))
+	eng.Push(MkString(out))
 	return nil
 }
 
-func stringRef(e *Engine) error {
-	idx := util.Assert(e.Pop()).Value.(int64)
-	str := util.Assert(e.Pop()).Value.(string)
+func stringRef(eng *Engine) error {
+	idx := util.Assert(eng.Pop()).Value.(int64)
+	str := util.Assert(eng.Pop()).Value.(string)
 
 	if int(idx) > len([]rune(str)) || idx < 0 {
 		return fmt.Errorf("index %d out of bounds for %d", idx, len([]rune(str)))
 	}
 
-	e.Push(MkChar([]rune(str)[idx]))
+	eng.Push(MkChar([]rune(str)[idx]))
 	return nil
 }
 
-func stringize(e *Engine) error {
+func stringize(eng *Engine) error {
 	var chars []rune
 	for {
-		if val, err := e.Pop(); err != nil {
+		if val, err := eng.Pop(); err != nil {
 			break
 		} else {
 			chars = append(chars, val.Value.(rune))
@@ -98,6 +98,6 @@ func stringize(e *Engine) error {
 		idx--
 	}
 
-	e.Push(MkString(string(out)))
+	eng.Push(MkString(string(out)))
 	return nil
 }

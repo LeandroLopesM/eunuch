@@ -6,7 +6,6 @@ import (
 
 type Scheme struct {
 	Args []Unit
-
 	Position Position
 }
 
@@ -18,7 +17,7 @@ func (s *Scheme) Params() []Unit {
 	return s.Args[1:]
 }
 
-func (s Scheme) Name() string {
+func (s *Scheme) Name() string {
 	if len(s.Args) == 0 {
 		return ""
 	} else {
@@ -31,17 +30,6 @@ type VectorVal = []Unit
 
 func (pos Position) ToString() string {
 	return fmt.Sprintf("%s:%d:%d", pos.File, pos.Line, pos.Char)
-}
-
-var TypeNames = map[Type](string){
-	Symbol:  "Symbol",
-	Integer: "Integer",
-	Float:   "Float",
-	Bool:    "Bool",
-	String:  "String",
-	Char:    "Char",
-	Vector:  "Vector",
-	Pair:    "Pair",
 }
 
 type Type int
@@ -66,14 +54,31 @@ const (
 	Number
 )
 
-func (tf Type) Matches(ty Type) bool {
+func (t Type) ToString() string {
+	switch t {
+	case SchemeType: return "Scheme"
+	case Symbol: return "Symbol"
+	case Integer: return "Integer"
+	case Float: return "Float"
+	case Bool: return "Bool"
+	case String: return "String"
+	case Char: return "Char"
+	case Vector: return "Vector"
+	case Pair: return "Pair"
+
+	default:
+		return "Unknown"
+	}
+}
+
+func (tf Type) Matches(other Type) bool {
 	switch tf {
 	case Any:
 		return true
 	case Number:
-		return ty == Integer || ty == Float
+		return other == Integer || other == Float
 	default:
-		return ty == Type(tf)
+		return other == tf
 	}
 }
 

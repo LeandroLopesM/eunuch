@@ -94,8 +94,10 @@ func (o Option[T]) IsSome() bool {
 }
 
 func None[T any]() Option[T] {
+	var def T
 	return Option[T]{
 		inUse: false,
+		val: def,
 	}
 }
 

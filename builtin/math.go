@@ -10,11 +10,11 @@ import (
 )
 
 func OrdOp(kind rune) BuiltinExec {
-	return func(e *Engine) error {
+	return func(eng *Engine) error {
 		var nums []Unit
 		var overallType Type
 
-		val, err := e.Pop()
+		val, err := eng.Pop()
 		for err == nil {
 			if len(nums) == 0 {
 				overallType = val.Type
@@ -25,13 +25,13 @@ func OrdOp(kind rune) BuiltinExec {
 						"(max)",
 						"(min)",
 					),
-					TypeNames[overallType],
-					TypeNames[val.Type],
+					overallType.ToString(),
+					val.Type.ToString(),
 				)
 			}
 
 			nums = append(nums, val)
-			val, err = e.Pop()
+			val, err = eng.Pop()
 		}
 
 		switch overallType {
@@ -46,7 +46,7 @@ func OrdOp(kind rune) BuiltinExec {
 				}
 			}
 
-			e.Push(MkFloat(curr))
+			eng.Push(MkFloat(curr))
 		default:
 			var curr = nums[0].Value.(int64)
 			for _, v := range nums {
@@ -59,7 +59,7 @@ func OrdOp(kind rune) BuiltinExec {
 				}
 			}
 
-			e.Push(MkInt(curr))
+			eng.Push(MkInt(curr))
 		}
 
 		return nil
@@ -75,9 +75,9 @@ func numAsF(num Unit) float64 {
 	}
 }
 
-func expt(e *Engine) error {
-	lhs, lErr := e.Pop()
-	rhs, rErr := e.Pop()
+func expt(eng *Engine) error {
+	lhs, lErr := eng.Pop()
+	rhs, rErr := eng.Pop()
 
 	if lErr != nil {
 		return lErr
@@ -88,7 +88,7 @@ func expt(e *Engine) error {
 	var lFloat = numAsF(lhs)
 	var rFloat = numAsF(rhs)
 
-	e.Push(MkFloat(math.Pow(lFloat, rFloat)))
+	eng.Push(MkFloat(math.Pow(lFloat, rFloat)))
 
 	return nil
 }
@@ -126,16 +126,16 @@ func MathOp(kind rune) BuiltinExec {
 		panic(fmt.Sprintf("undefined operation %c", kind))
 	}
 
-	return func(e *Engine) error {
+	return func(eng *Engine) error {
 		filter := Number
 		var numbers []Unit
 		var outType = Integer // We can be optimistic, right?
 
-		v, err := e.Pop()
+		v, err := eng.Pop()
 
 		for err == nil {
 			if !filter.Matches(v.Type) {
-				return fmt.Errorf("expected integer or float, got %s", TypeNames[v.Type])
+				return fmt.Errorf("expected integer or float, got %s", v.Type.ToString())
 			}
 
 			if v.Type == Float {
@@ -144,7 +144,7 @@ func MathOp(kind rune) BuiltinExec {
 
 			numbers = append(numbers, v)
 
-			v, err = e.Pop()
+			v, err = eng.Pop()
 		}
 
 		switch outType {
@@ -154,14 +154,14 @@ func MathOp(kind rune) BuiltinExec {
 				out = floatOp(out, numAsF(num))
 			}
 
-			e.Push(MkFloat(out))
+			eng.Push(MkFloat(out))
 		default:
 			var out = numbers[0].Value.(int64)
 			for _, num := range numbers[1:] {
 				out = intOp(out, num.Value.(int64))
 			}
 
-			e.Push(MkInt(out))
+			eng.Push(MkInt(out))
 		}
 
 		return nil

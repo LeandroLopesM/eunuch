@@ -46,6 +46,8 @@ func New() Engine {
 		stack:        NewStack[Unit](),
 		stackHistory: NewStack[int](),
 
+		currentFn: util.None[Scheme](),
+
 		vars:  make(map[string]Unit),
 		funcs: make(map[string]Builtin),
 	}
@@ -57,13 +59,13 @@ func formatStackTrace(strace error) error {
 	calls := strings.Split(strace.Error(), "|")
 	var out string
 
-	var i = 0
+	var idx = 0
 	for range calls[:len(calls)-1] {
-		out += fmt.Sprintf("%s%s\n", strings.Repeat(". ", i+1), calls[i])
-		i++
+		out += fmt.Sprintf("%s%s\n", strings.Repeat(". ", idx+1), calls[idx])
+		idx++
 	}
 
-	out += fmt.Sprintf("%s%s", strings.Repeat(". ", i+1), aurora.Red(calls[len(calls)-1]))
+	out += fmt.Sprintf("%s%s", strings.Repeat(". ", idx+1), aurora.Red(calls[len(calls)-1]))
 
 	return errors.New(out)
 }
@@ -172,8 +174,8 @@ func (eng *Engine) checkScheme(scheme Scheme) error {
 			return fmt.Errorf(
 				"incorrect argument type for '%s'. Expected '%s' got '%s'",
 				scheme.Name(),
-				TypeNames[actualFn.Args[idx]],
-				TypeNames[inType],
+				actualFn.Args[idx].ToString(),
+				inType.ToString(),
 			)
 		}
 
@@ -205,12 +207,12 @@ func (eng *Engine) runScheme(scheme Scheme) error {
 	eng.currentFn = util.Some(scheme)
 
 	// Function must exist (Already checked with checkScheme)
-	fn := eng.funcs[scheme.Name()]
+	actualFn := eng.funcs[scheme.Name()]
 
 	eng.saveStack()
 	defer eng.loadStack()
 
-	if prepFun, err := fn.Prepare.Try(); err == nil {
+	if prepFun, err := actualFn.Prepare.Try(); err == nil {
 		if err := prepFun(scheme, eng); err != nil {
 			return eng.schemeError(scheme, err)
 		}
@@ -222,7 +224,7 @@ func (eng *Engine) runScheme(scheme Scheme) error {
 		}
 	}
 
-	if ret := fn.Call(eng); ret != nil {
+	if ret := actualFn.Call(eng); ret != nil {
 		return eng.schemeError(scheme, ret)
 	}
 
@@ -231,7 +233,7 @@ func (eng *Engine) runScheme(scheme Scheme) error {
 	return nil
 }
 
-func (eng *Engine) AddFunc(name string, fn Builtin) {
+func (eng *Engine) AddFunc(name string, function Builtin) {
 	for k := range eng.funcs {
 		if k == name {
 			log.Warnf("Attempt to redeclare function %s", name)
@@ -239,7 +241,7 @@ func (eng *Engine) AddFunc(name string, fn Builtin) {
 		}
 	}
 
-	eng.funcs[name] = fn
+	eng.funcs[name] = function
 }
 
 func (eng *Engine) Pop() (Unit, error) {

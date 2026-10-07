@@ -8,28 +8,28 @@ import (
 	"github.com/leandrolopesm/eunuch/util"
 )
 
-func vectorRef(e *Engine) error {
-	idx := util.Assert(e.Pop()).Value.(int64)
-	vec := util.Assert(e.Pop()).Value.(VectorVal)
+func vectorRef(eng *Engine) error {
+	idx := util.Assert(eng.Pop()).Value.(int64)
+	vec := util.Assert(eng.Pop()).Value.(VectorVal)
 
 	if int(idx) > len(vec) || idx < 0 {
 		return fmt.Errorf("index %d out of bounds for %d", idx, len(vec))
 	}
 
-	e.Push(vec[idx])
+	eng.Push(vec[idx])
 	return nil
 }
 
-func vectorSet(e *Engine) error {
-	val := util.Assert(e.Pop())
-	idx := util.Assert(e.Pop()).Value.(int64)
-	vecVarName := util.Assert(e.Pop()).Value.(string)
-	vecVar,err := e.GetVar(vecVarName)
+func vectorSet(eng *Engine) error {
+	val := util.Assert(eng.Pop())
+	idx := util.Assert(eng.Pop()).Value.(int64)
+	vecVarName := util.Assert(eng.Pop()).Value.(string)
+	vecVar,err := eng.GetVar(vecVarName)
 
 	if err != nil {
 		return err
 	} else if vecVar.Type != Vector {
-		return fmt.Errorf("expected 'Vector', got '%s'", TypeNames[vecVar.Type])
+		return fmt.Errorf("expected 'Vector', got '%s'", vecVar.Type.ToString())
 	}
 
 	asArr := vecVar.Value.(VectorVal)
@@ -39,28 +39,28 @@ func vectorSet(e *Engine) error {
 
 	asArr[idx] = val
 
-	e.SetVar(vecVarName, MkVector(asArr))
+	eng.SetVar(vecVarName, MkVector(asArr))
 
 	return nil
 }
 
-func vectorCreate(e *Engine) error {
-	var vecLen = util.Assert(e.Pop()).Value.(int64)
+func vectorCreate(eng *Engine) error {
+	var vecLen = util.Assert(eng.Pop()).Value.(int64)
 
 	if vecLen < 0 {
 		return fmt.Errorf("invalid index %d", vecLen)
 	}
 
 	var tmp = make(VectorVal, vecLen)
-	e.Push(MkVector(tmp))
+	eng.Push(MkVector(tmp))
 
 	return nil
 }
 
-func vector(e *Engine) error {
+func vector(eng *Engine) error {
 	var strs VectorVal
 	for {
-		if val, err := e.Pop(); err != nil {
+		if val, err := eng.Pop(); err != nil {
 			break
 		} else {
 			strs = append(strs, val)
@@ -75,7 +75,7 @@ func vector(e *Engine) error {
 		idx--
 	}
 
-	e.Push(MkVector(out))
+	eng.Push(MkVector(out))
 	return nil
 }
 

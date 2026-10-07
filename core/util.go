@@ -18,7 +18,7 @@ func SprintUnit(unit Unit) string {
 	switch unit.Type {
 	case SchemeType:
 		asScheme := unit.Value.(Scheme)
-		var ret = fmt.Sprintf("(%s", asScheme.Name())
+		var ret = "(" + asScheme.Name()
 		for i := range asScheme.Params() {
 			ret += fmt.Sprintf(" %s", SprintUnit(asScheme.Args[i]))
 		}
@@ -43,12 +43,12 @@ func SprintUnit(unit Unit) string {
 		var ret string
 		for i := range asVec {
 			if i != 0 {
-				ret = fmt.Sprintf("%s %s", ret, SprintUnit(asVec[i]))
+				ret += SprintUnit(asVec[i])
 			} else {
-				ret = fmt.Sprintf("#(%s", SprintUnit(asVec[i]))
+				ret = "#(" + SprintUnit(asVec[i])
 			}
 		}
-		return fmt.Sprintf("%s)", ret)
+		return ret + ")"
 	default:
 		panic(fmt.Sprintf("Unknown type %v", unit))
 	}
@@ -80,12 +80,12 @@ func debugUnit(unit Unit, depth int) {
 		var ret string
 		for i := range asVec {
 			if i != 0 {
-				ret = fmt.Sprintf("%s %s", ret, SprintUnit(asVec[i]))
+				ret += SprintUnit(asVec[i])
 			} else {
-				ret = fmt.Sprintf("#(%s", SprintUnit(asVec[i]))
+				ret += "#(" + SprintUnit(asVec[i])
 			}
 		}
-		ret = fmt.Sprintf("%s)", ret)
+		ret += ")"
 
 		log.Debugf("%sVector %s", repeat(depth), ret)
 	default:

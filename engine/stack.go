@@ -47,13 +47,13 @@ func (stack *Stack[T]) Peek() (T, error) {
 	return val, err
 }
 
-func (stack *Stack[T]) Push(v T) {
+func (stack *Stack[T]) Push(value T) {
 	if stack.ptr+1 >= len(stack.raw) {
 		panic("Stack overflow")
 	}
 
 	stack.ptr++
-	stack.raw[stack.ptr] = v
+	stack.raw[stack.ptr] = value
 }
 
 func (stack *Engine) stackGuard() int {
