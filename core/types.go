@@ -47,7 +47,8 @@ var TypeNames = map[Type](string){
 type Type int
 
 const (
-	Null Type = iota // default type for anything, ignored
+	// default type for anything, ignored
+	NullType Type = iota 
 
 	SchemeType
 	Symbol
@@ -86,6 +87,8 @@ type Unit struct {
 
 	Value any
 }
+
+var Null = Unit { Type: NullType, Value: nil }
 
 // For user-defined types.
 // Be very careful using since a lot of functions accept 'Any'

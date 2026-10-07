@@ -45,13 +45,13 @@ func vectorSet(e *Engine) error {
 }
 
 func vectorCreate(e *Engine) error {
-	var len = util.Assert(e.Pop()).Value.(int64)
+	var vecLen = util.Assert(e.Pop()).Value.(int64)
 
-	if len < 0 {
-		return fmt.Errorf("invalid index %d", len)
+	if vecLen < 0 {
+		return fmt.Errorf("invalid index %d", vecLen)
 	}
 
-	var tmp = make(VectorVal, len)
+	var tmp = make(VectorVal, vecLen)
 	e.Push(MkVector(tmp))
 
 	return nil

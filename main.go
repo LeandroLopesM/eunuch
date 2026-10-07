@@ -23,25 +23,7 @@ func main() {
 	builtin.RegisterSelf(&lispEngine)
 
 	if opt.Repl {
-		var editor readline.Editor
-
-		for {
-			if text, err := editor.ReadLine(context.Background()); err != nil {
-				if err.Error() == "EOF" {
-					break
-				}
-
-				log.Errorf("Failed to read input: %s", err)
-			} else {
-				if err := lispEngine.ExecuteStr(text); err != nil {
-					fmt.Print(aurora.Red("Execution failed:\n"), err)
-				}
-
-				if v, e := lispEngine.Pop(); e == nil { // If the last call pushed a value, print it
-					core.PrintUnit(v)
-				}
-			}
-		}
+		runREPL(lispEngine)
 	} else {
 		for _, file := range opt.Files {
 			if err := lispEngine.ExecuteFile(file); err != nil {
@@ -51,6 +33,28 @@ func main() {
 
 		if v, e := lispEngine.Pop(); e == nil { // If the last call pushed a value, print it
 			fmt.Printf("\n;; %v", core.SprintUnit(v))
+		}
+	}
+}
+
+func runREPL(lispEngine engine.Engine) {
+	var editor readline.Editor
+
+	for {
+		if text, err := editor.ReadLine(context.Background()); err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+
+			log.Errorf("Failed to read input: %s", err)
+		} else {
+			if err := lispEngine.ExecuteStr(text); err != nil {
+				fmt.Print(aurora.Red("Execution failed:\n"), err)
+			}
+
+			if v, e := lispEngine.Pop(); e == nil { // If the last call pushed a value, print it
+				core.PrintUnit(v)
+			}
 		}
 	}
 }

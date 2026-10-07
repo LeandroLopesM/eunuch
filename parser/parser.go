@@ -84,7 +84,7 @@ func (p *Parser) expect(what string) {
 	}
 }
 
-func (p *Parser) EOF() bool {
+func (p *Parser) eof() bool {
 	return p.pos >= len(p.input)
 }
 
@@ -96,7 +96,7 @@ func (p *Parser) consume() rune {
 func (p *Parser) consumeWhile(condition func(rune) bool) string {
 	var buffer []rune
 
-	for !p.EOF() && condition(p.next()) {
+	for !p.eof() && condition(p.next()) {
 		buffer = append(buffer, p.consume())
 	}
 
@@ -142,7 +142,7 @@ func ParseFile(fileName, fileContent string) ([]Unit, error) {
 	}
 
 	var file []Unit
-	for !parser.EOF() {
+	for !parser.eof() {
 		parser.consumeWhitespace()
 
 		if val, err := parser.parseExpression(); err != nil {
@@ -197,7 +197,7 @@ func (p *Parser) parseQuote() (Unit, error) {
 	p.consume()
 
 	if val, err := p.parseExpression(); err != nil {
-		return Unit{}, err
+		return Null, err
 	} else {
 		return MkScheme(Scheme{
 			Args:     slices.Concat([]Unit{MkSymbol("quote"), val}),
@@ -211,9 +211,9 @@ func (p *Parser) parseString() (Unit, error) {
 	start := p.pos
 	str := p.consumeWhile(func(c rune) bool { return c != '"' })
 
-	if p.EOF() {
+	if p.eof() {
 		p.pos = start
-		return MkString(""), p.err("Unclosed string starts here")
+		return Null, p.err("Unclosed string starts here")
 	} else {
 		p.consume()
 	}
@@ -234,7 +234,7 @@ func (p *Parser) parseScheme() (Unit, error) {
 		}
 
 		if val, err := p.parseExpression(); err != nil {
-			return MkScheme(Scheme{}), err
+			return Null, err
 		} else {
 			out.Args = append(out.Args, val)
 		}
@@ -260,7 +260,7 @@ func (p *Parser) parseInt() (Unit, error) {
 	}
 
 	if val, err := strconv.ParseInt(buffer, radix, 64); err != nil {
-		return MkInt(0), p.err("Invalid integer literal %s", string(buffer))
+		return Null, p.err("Invalid integer literal %s", string(buffer))
 	} else {
 		return MkInt(val), nil
 	}
@@ -283,11 +283,10 @@ func (p *Parser) parseFloat() (Unit, error) {
 	}
 
 	if val, err := strconv.ParseFloat(string(buffer), 64); err != nil {
-		return MkFloat(0.), p.err("Invalid float literal %s", string(buffer))
+		return Null, p.err("Invalid float literal %s", string(buffer))
 	} else {
 		return MkFloat(val), nil
 	}
-
 }
 
 func (p *Parser) parseLiteral() (Unit, error) {
@@ -332,7 +331,7 @@ func (p *Parser) parseChar() (Unit, error) {
 		return MkChar('\n'), nil
 	default:
 		if len(charName) > 1 {
-			return MkChar(0), p.err("Unknown character literal %v", charName)
+			return Null, p.err("Unknown character literal %v", charName)
 		}
 
 		return MkChar(([]rune(charName))[0]), nil

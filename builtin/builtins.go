@@ -104,7 +104,6 @@ func RegisterSelf(eng *Engine) {
  *	spec and, therefore, is open to critique.
  */
 func quote(e *Engine) error {
-
 	e.Push(util.Assert(e.Pop()))
 	return nil
 }

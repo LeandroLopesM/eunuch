@@ -50,7 +50,6 @@ func OrdOp(kind rune) BuiltinExec {
 		default:
 			var curr = nums[0].Value.(int64)
 			for _, v := range nums {
-
 				if util.If(
 					kind == '>',
 					v.Value.(int64) > curr,
@@ -94,8 +93,8 @@ func expt(e *Engine) error {
 	return nil
 }
 
-// TODO: (- 4) => -4
-// TODO: (/ 4) => 1/4
+// TODO: (- 4) => -4.
+// TODO: (/ 4) => 1/4.
 func MathOp(kind rune) BuiltinExec {
 	floatOp := func(a float64, b float64) float64 {
 		switch kind {

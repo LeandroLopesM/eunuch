@@ -10,7 +10,7 @@ import (
  * for eunuch.
  */
 
-// Core API
+// Core API.
 type PairVal = core.PairVal
 type Position = core.Position
 type Scheme = core.Scheme
@@ -18,13 +18,13 @@ type Type = core.Type
 type Unit = core.Unit
 type VectorVal = core.VectorVal
 
-// Engine API
+// Engine API.
 type Engine = engine.Engine
 type Builtin = engine.Builtin
 type BuiltinExec = engine.BuiltinExec
 type Stack[T any] = engine.Stack[T]
 type StagingFunc = engine.StagingFunc
 
-// Parser API
+// Parser API.
 type Parser = parser.Parser
 type Iterator[T any] = parser.Iterator[T]

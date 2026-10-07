@@ -47,12 +47,6 @@ func (stack *Stack[T]) Peek() (T, error) {
 	return val, err
 }
 
-// func (stack *Stack[T]) grow() {
-// 	last := stack.raw
-// 	stack.raw = make([]T, stack.size*2)
-// 	copy(last, stack.raw)
-// }
-
 func (stack *Stack[T]) Push(v T) {
 	if stack.ptr+1 >= len(stack.raw) {
 		panic("Stack overflow")

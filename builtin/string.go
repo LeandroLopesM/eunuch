@@ -33,13 +33,13 @@ func stringSet(e *Engine) error {
 }
 
 func stringCreate(e *Engine) error {
-	var len = util.Assert(e.Pop()).Value.(int64)
+	var strLen = util.Assert(e.Pop()).Value.(int64)
 
-	if len < 0 {
-		return fmt.Errorf("invalid index %d", len)
+	if strLen < 0 {
+		return fmt.Errorf("invalid index %d", strLen)
 	}
 
-	var tmp = make([]rune, len)
+	var tmp = make([]rune, strLen)
 	e.Push(MkString(string(tmp)))
 
 	return nil
