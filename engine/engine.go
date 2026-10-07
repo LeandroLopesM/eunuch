@@ -57,9 +57,13 @@ func formatStackTrace(strace error) error {
 	calls := strings.Split(strace.Error(), "|")
 	var out string
 
-	for i := range calls {
-		out = fmt.Sprintf("%s%s%s\n", out, strings.Repeat(". ", i+1), calls[i])
+	var i = 0
+	for range calls[:len(calls)-1] {
+		out += fmt.Sprintf("%s%s\n", strings.Repeat(". ", i+1), calls[i])
+		i++
 	}
+
+	out += fmt.Sprintf("%s%s", strings.Repeat(". ", i+1), aurora.Red(calls[len(calls)-1]))
 
 	return errors.New(out)
 }
@@ -184,9 +188,13 @@ func (eng *Engine) checkScheme(scheme Scheme) error {
 func (eng *Engine) error(msg string, args ...any) error {
 	if eng.currentFn.IsSome() {
 		scheme := eng.currentFn.Unwrap()
-		return fmt.Errorf("%s (%s): %s", scheme.Position.ToString(), scheme.Name(), aurora.Red(fmt.Sprintf(msg, args...)))
+		return fmt.Errorf("%s (%s): %s", scheme.Position.ToString(), scheme.Name(), fmt.Sprintf(msg, args...))
 	}
 	return fmt.Errorf("%s", aurora.Red(fmt.Sprintf(msg, args...)))
+}
+
+func (eng *Engine) schemeError(currScheme Scheme, err error) error {
+	return fmt.Errorf("%s (%s):|%s", currScheme.Position.ToString(), currScheme.Name(), err)
 }
 
 func (eng *Engine) runScheme(scheme Scheme) error {
@@ -204,18 +212,18 @@ func (eng *Engine) runScheme(scheme Scheme) error {
 
 	if prepFun, err := fn.Prepare.Try(); err == nil {
 		if err := prepFun(scheme, eng); err != nil {
-			return eng.error("%s", err)
+			return eng.schemeError(scheme, err)
 		}
 	} else {
 		for _, arg := range scheme.Params() {
 			if err := eng.Evaluate(arg); err != nil {
-				return eng.error("%s", err.Error())
+				return eng.schemeError(scheme, err)
 			}
 		}
 	}
 
 	if ret := fn.Call(eng); ret != nil {
-		return eng.error("%s", ret)
+		return eng.schemeError(scheme, ret)
 	}
 
 	eng.currentFn = util.None[Scheme]()
