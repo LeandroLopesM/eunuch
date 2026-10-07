@@ -48,7 +48,7 @@ func runREPL(lispEngine engine.Engine) {
 
 			log.Errorf("Failed to read input: %s", err)
 		} else {
-			if err := lispEngine.ExecuteStr(text); err != nil {
+			if err := lispEngine.ExecuteStr("REPL", text); err != nil {
 				fmt.Print(aurora.Red("Execution failed:\n"), err)
 			}
 

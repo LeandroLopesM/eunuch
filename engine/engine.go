@@ -40,9 +40,7 @@ type Engine struct {
 }
 
 func New() Engine {
-	ret := Engine{
-		file: "#ENGINE",
-
+	return Engine{
 		stack:        NewStack[Unit](),
 		stackHistory: NewStack[int](),
 
@@ -51,8 +49,6 @@ func New() Engine {
 		vars:  make(map[string]Unit),
 		funcs: make(map[string]Builtin),
 	}
-
-	return ret
 }
 
 func formatStackTrace(strace error) error {
@@ -74,17 +70,12 @@ func (eng *Engine) ExecuteFile(file string) error {
 	if v, e := os.ReadFile(file); e != nil {
 		return e
 	} else {
-		eng.file = file
-		return eng.ExecuteStr(string(v))
+		return eng.ExecuteStr(file, string(v))
 	}
 }
 
-func (eng *Engine) ExecuteStr(code string) error {
-	if eng.file == "#ENGINE" { // If this wasn't called by ExecuteFile
-		eng.file = "<anonymous>"
-	}
-
-	schemes, err := parser.ParseFile(eng.file, code)
+func (eng *Engine) ExecuteStr(file, code string) error {
+	schemes, err := parser.ParseFile(file, code)
 
 	if err != nil {
 		return err
