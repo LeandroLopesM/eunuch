@@ -1,1 +1,3 @@
-*.exe
+/*.exe
+/*zig-*
+/private

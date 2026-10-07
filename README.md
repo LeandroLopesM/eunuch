@@ -1,5 +1,8 @@
 # Eunuch
-A scheme interpreter written in Go.
+A scheme interpreter written in Zig.
+
+> [!WARNING]
+> This branch' API will *try* to follow the master's API, however, due to language constraints, some function signatures may change.
 
 ## USAGE
 ```
