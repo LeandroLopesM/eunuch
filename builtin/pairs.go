@@ -20,7 +20,7 @@ func pairSet(idx int) BuiltinExec {
 	return func (e *Engine) error {
 		pairVarName := util.Assert(e.Pop()).Value.(string)
 		pairVarVal := util.Assert(e.GetVar(pairVarName)).Value.(PairVal)
-		
+
 		newVal := util.Assert(e.Pop())
 		pairVarVal[idx] = newVal
 

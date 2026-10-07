@@ -25,7 +25,7 @@ func vectorSet(e *Engine) error {
 	idx := util.Assert(e.Pop()).Value.(int64)
 	vecVarName := util.Assert(e.Pop()).Value.(string)
 	vecVar,err := e.GetVar(vecVarName)
-	
+
 	if err != nil {
 		return err
 	} else if vecVar.Type != Vector {

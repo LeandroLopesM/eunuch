@@ -25,7 +25,7 @@ func charOp(op string) BuiltinExec {
 		// Stack pops inverted
 		charB := util.Assert(e.Pop()).Value.(rune)
 		charA := util.Assert(e.Pop()).Value.(rune)
-	
+
 		e.Push(MkBool(exec(charA, charB)))
 		return nil
 	}
@@ -48,7 +48,7 @@ func charCiOp(op string) BuiltinExec {
 		// Stack pops inverted
 		charB := unicode.ToUpper(util.Assert(e.Pop()).Value.(rune))
 		charA :=  unicode.ToUpper(util.Assert(e.Pop()).Value.(rune))
-		
+
 		e.Push(MkBool(exec(charA, charB)))
 		return nil
 	}

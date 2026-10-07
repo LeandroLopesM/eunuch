@@ -81,7 +81,7 @@ func (o Option[T]) Unwrap() T {
 
 func (o Option[T]) Try() (T, error) {
 	var tmp T
-	
+
 	if !o.inUse {
 		return tmp, errors.New("empty option")
 	}
