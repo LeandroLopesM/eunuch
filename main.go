@@ -44,6 +44,8 @@ func runREPL(lispEngine engine.Engine) {
 		if text, err := editor.ReadLine(context.Background()); err != nil {
 			if err.Error() == "EOF" {
 				break
+			} else if err.Error() == "^C" {
+				continue
 			}
 
 			log.Errorf("Failed to read input: %s", err)

@@ -233,13 +233,18 @@ func (p *parser) parseString() (Unit, error) {
 
 func (p *parser) parseScheme() (Unit, error) {
 	p.expect("(")
+	
+	start := p.pos
 	out := Scheme{
 		Position: p.currPos(),
 		Args: []Unit{},
 	}
 
 	for {
-		if p.next() == ')' {
+		if p.eof() {
+			p.pos = start
+			return Null, p.err("Unclosed scheme here")
+		} else if p.next() == ')' {
 			_ = p.consume()
 			break
 		}
