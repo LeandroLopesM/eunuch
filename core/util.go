@@ -19,7 +19,8 @@ func SprintUnit(unit Unit) string {
 	case SchemeType:
 		asScheme := unit.Value.(Scheme)
 		var ret strings.Builder
-		ret.WriteString("(" + asScheme.Name())
+		ret.WriteString("(");
+		ret.WriteString(asScheme.Name())
 
 		for i := range asScheme.Params() {
 			ret.WriteString(fmt.Sprintf(" %s", SprintUnit(asScheme.Args[i])))
