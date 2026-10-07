@@ -18,19 +18,19 @@ func SprintUnit(unit Unit) string {
 	switch unit.Type {
 	case SchemeType:
 		asScheme := unit.Value.(Scheme)
-		var ret string = fmt.Sprintf("(%s", asScheme.Name())
+		var ret = fmt.Sprintf("(%s", asScheme.Name())
 		for i := range asScheme.Params() {
 			ret += fmt.Sprintf(" %s", SprintUnit(asScheme.Args[i]))
 		}
 		return ret + ")"
 	case Symbol:
-		return fmt.Sprintf("%s", unit.Value.(string))
+		return unit.Value.(string)
+	case String:
+		return unit.Value.(string)
 	case Float:
 		return fmt.Sprintf("%f", unit.Value.(float64))
 	case Integer:
 		return fmt.Sprintf("%d", unit.Value.(int64))
-	case String:
-		return fmt.Sprintf("%s", unit.Value.(string))
 	case Bool:
 		return fmt.Sprintf("%v", unit.Value.(bool))
 	case Char:

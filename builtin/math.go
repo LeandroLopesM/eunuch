@@ -86,8 +86,8 @@ func expt(e *Engine) error {
 		return rErr
 	}
 
-	var lFloat float64 = numAsF(lhs)
-	var rFloat float64 = numAsF(rhs)
+	var lFloat = numAsF(lhs)
+	var rFloat = numAsF(rhs)
 
 	e.Push(MkFloat(math.Pow(lFloat, rFloat)))
 
@@ -124,19 +124,19 @@ func MathOp(kind rune) BuiltinExec {
 			return a / b
 		}
 
-		panic(fmt.Sprintf("Undefined operation %c", kind))
+		panic(fmt.Sprintf("undefined operation %c", kind))
 	}
 
 	return func(e *Engine) error {
 		filter := Number
 		var numbers []Unit
-		var outType Type = Integer // We can be optimistic, right?
+		var outType = Integer // We can be optimistic, right?
 
 		v, err := e.Pop()
 
 		for err == nil {
 			if !filter.Matches(v.Type) {
-				return fmt.Errorf("Expected integer or float, got %s", TypeNames[v.Type])
+				return fmt.Errorf("expected integer or float, got %s", TypeNames[v.Type])
 			}
 
 			if v.Type == Float {
@@ -150,14 +150,14 @@ func MathOp(kind rune) BuiltinExec {
 
 		switch outType {
 		case Float:
-			var out float64 = numAsF(numbers[0])
+			var out = numAsF(numbers[0])
 			for _, num := range numbers[1:] {
 				out = floatOp(out, numAsF(num))
 			}
 
 			e.Push(MkFloat(out))
 		default:
-			var out int64 = numbers[0].Value.(int64)
+			var out = numbers[0].Value.(int64)
 			for _, num := range numbers[1:] {
 				out = intOp(out, num.Value.(int64))
 			}

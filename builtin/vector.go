@@ -13,7 +13,7 @@ func vectorRef(e *Engine) error {
 	vec := util.Assert(e.Pop()).Value.(VectorVal)
 
 	if int(idx) > len(vec) || idx < 0 {
-		return fmt.Errorf("Index %d out of bounds for %d", idx, len(vec))
+		return fmt.Errorf("index %d out of bounds for %d", idx, len(vec))
 	}
 
 	e.Push(vec[idx])
@@ -29,12 +29,12 @@ func vectorSet(e *Engine) error {
 	if err != nil {
 		return err
 	} else if vecVar.Type != Vector {
-		return fmt.Errorf("Expected 'Vector', got '%s'", TypeNames[vecVar.Type])
+		return fmt.Errorf("expected 'Vector', got '%s'", TypeNames[vecVar.Type])
 	}
 
 	asArr := vecVar.Value.(VectorVal)
 	if int(idx) > len(asArr) - 1 || idx < 0 {
-		return fmt.Errorf("Index %d out of bounds for %d ", idx, len(asArr))
+		return fmt.Errorf("index %d out of bounds for %d ", idx, len(asArr))
 	}
 
 	asArr[idx] = val
@@ -45,10 +45,10 @@ func vectorSet(e *Engine) error {
 }
 
 func vectorCreate(e *Engine) error {
-	var len int64 = util.Assert(e.Pop()).Value.(int64)
+	var len = util.Assert(e.Pop()).Value.(int64)
 
 	if len < 0 {
-		return fmt.Errorf("Invalid index %d", len)
+		return fmt.Errorf("invalid index %d", len)
 	}
 
 	var tmp = make(VectorVal, len)

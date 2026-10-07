@@ -64,21 +64,21 @@ func formatStackTrace(strace error) error {
 	return errors.New(out)
 }
 
-func (self *Engine) ExecuteFile(file string) error {
+func (eng *Engine) ExecuteFile(file string) error {
 	if v, e := os.ReadFile(file); e != nil {
 		return e
 	} else {
-		self.file = file
-		return self.ExecuteStr(string(v))
+		eng.file = file
+		return eng.ExecuteStr(string(v))
 	}
 }
 
-func (self *Engine) ExecuteStr(code string) error {
-	if self.file == "#ENGINE" { // If this wasn't called by ExecuteFile
-		self.file = "<anonymous>"
+func (eng *Engine) ExecuteStr(code string) error {
+	if eng.file == "#ENGINE" { // If this wasn't called by ExecuteFile
+		eng.file = "<anonymous>"
 	}
 
-	schemes, err := parser.ParseFile(self.file, code)
+	schemes, err := parser.ParseFile(eng.file, code)
 
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (self *Engine) ExecuteStr(code string) error {
 	}
 
 	for _, expr := range schemes {
-		if err := self.Evaluate(expr); err != nil {
+		if err := eng.Evaluate(expr); err != nil {
 			return formatStackTrace(err)
 		}
 	}
@@ -99,39 +99,39 @@ func (self *Engine) ExecuteStr(code string) error {
 	return nil
 }
 
-func (self *Engine) Evaluate(unit Unit) error {
+func (eng *Engine) Evaluate(unit Unit) error {
 	switch unit.Type {
 	case SchemeType:
-		return self.runScheme(unit.Value.(Scheme))
+		return eng.runScheme(unit.Value.(Scheme))
 	case Symbol:
-		if val, err := self.GetVar(unit.Value.(string)); err != nil {
+		if val, err := eng.GetVar(unit.Value.(string)); err != nil {
 			return err
-		} else if err := self.Evaluate(val); err != nil {
+		} else if err := eng.Evaluate(val); err != nil {
 			return err
 		}
 	default:
-		self.Push(unit)
+		eng.Push(unit)
 	}
 
 	return nil
 }
 
-func (self *Engine) GetVar(name string) (Unit, error) {
-	if v, ok := self.vars[name]; !ok {
-		return Unit{}, fmt.Errorf("Undefined variable '%s'", name)
+func (eng *Engine) GetVar(name string) (Unit, error) {
+	if v, ok := eng.vars[name]; !ok {
+		return Unit{}, fmt.Errorf("undefined variable '%s'", name)
 	} else {
 		return v, nil
 	}
 }
 
-func (self *Engine) SetVar(name string, val Unit) {
-	self.vars[name] = val
+func (eng *Engine) SetVar(name string, val Unit) {
+	eng.vars[name] = val
 }
 
-func (self *Engine) checkScheme(scheme Scheme) error {
+func (eng *Engine) checkScheme(scheme Scheme) error {
 	var actualFn Builtin
-	if fn, ok := self.funcs[scheme.Name()]; !ok {
-		return fmt.Errorf("Undefined function '%s'", scheme.Name())
+	if fn, ok := eng.funcs[scheme.Name()]; !ok {
+		return fmt.Errorf("undefined function '%s'", scheme.Name())
 	} else {
 		actualFn = fn
 	}
@@ -139,7 +139,7 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 	schemeParams := scheme.Params()
 
 	if len(schemeParams) != len(actualFn.Args) && !actualFn.VarArgs {
-		return fmt.Errorf("Scheme '%s': Expected %d args, got %d", scheme.Name(), len(actualFn.Args), len(schemeParams))
+		return fmt.Errorf("scheme '%s': Expected %d args, got %d", scheme.Name(), len(actualFn.Args), len(schemeParams))
 	}
 
 	idx := 0
@@ -148,16 +148,16 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 
 		if schemeParams[idx].Type == SchemeType {
 			asScheme := schemeParams[idx].Value.(Scheme)
-			if e := self.checkScheme(asScheme); e != nil {
+			if e := eng.checkScheme(asScheme); e != nil {
 				return e
 			}
 
 			// If the function exists, use it's return value as the type
-			inType = self.funcs[asScheme.Name()].Return
+			inType = eng.funcs[asScheme.Name()].Return
 
 			// If the passed argument is a symbol and we dont want a symbol, get its actual type
 		} else if schemeParams[idx].Type == Symbol && !actualFn.Args[idx].Matches(Symbol) {
-			if v, e := self.GetVar(schemeParams[idx].Value.(string)); e != nil {
+			if v, e := eng.GetVar(schemeParams[idx].Value.(string)); e != nil {
 				return e
 			} else {
 				inType = v.Type
@@ -166,7 +166,7 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 
 		if !actualFn.Args[idx].Matches(inType) {
 			return fmt.Errorf(
-				"Incorrect argument type for '%s'. Expected '%s' got '%s'",
+				"incorrect argument type for '%s'. Expected '%s' got '%s'",
 				scheme.Name(),
 				TypeNames[actualFn.Args[idx]],
 				TypeNames[inType],
@@ -181,64 +181,63 @@ func (self *Engine) checkScheme(scheme Scheme) error {
 	return nil
 }
 
-func (self *Engine) error(msg string, args ...any) error {
-	if self.currentFn.IsSome() {
-		scheme := self.currentFn.Unwrap()
+func (eng *Engine) error(msg string, args ...any) error {
+	if eng.currentFn.IsSome() {
+		scheme := eng.currentFn.Unwrap()
 		return fmt.Errorf("%s (%s): %s", scheme.Position.ToString(), scheme.Name(), aurora.Red(fmt.Sprintf(msg, args...)))
 	}
 	return fmt.Errorf("%s", aurora.Red(fmt.Sprintf(msg, args...)))
 }
 
-func (self *Engine) runScheme(scheme Scheme) error {
-	if err := self.checkScheme(scheme); err != nil {
-		return self.error("%s", err)
+func (eng *Engine) runScheme(scheme Scheme) error {
+	if err := eng.checkScheme(scheme); err != nil {
+		return eng.error("%s", err)
 	}
 
-	self.currentFn = util.Some(scheme)
+	eng.currentFn = util.Some(scheme)
 
 	// Function must exist (Already checked with checkScheme)
-	fn := self.funcs[scheme.Name()]
+	fn := eng.funcs[scheme.Name()]
 
-	self.saveStack()
-	defer self.loadStack()
+	eng.saveStack()
+	defer eng.loadStack()
 
 	if prepFun, err := fn.Prepare.Try(); err == nil {
-		if err := prepFun(scheme, self); err != nil {
-			return self.error("%s", err)
+		if err := prepFun(scheme, eng); err != nil {
+			return eng.error("%s", err)
 		}
 	} else {
 		for _, arg := range scheme.Params() {
-			if err := self.Evaluate(arg); err != nil {
-				return self.error("%s", err.Error())
+			if err := eng.Evaluate(arg); err != nil {
+				return eng.error("%s", err.Error())
 			}
 		}
 	}
 
-	if ret := fn.Call(self); ret != nil {
-		return self.error("%s", ret)
+	if ret := fn.Call(eng); ret != nil {
+		return eng.error("%s", ret)
 	}
 
-	self.currentFn = util.None[Scheme]()
+	eng.currentFn = util.None[Scheme]()
 
 	return nil
 }
 
-func (self *Engine) AddFunc(name string, fn Builtin) error {
-	for k := range self.funcs {
+func (eng *Engine) AddFunc(name string, fn Builtin) {
+	for k := range eng.funcs {
 		if k == name {
-			return fmt.Errorf("Attempt to redeclare function %s", name)
+			log.Warnf("Attempt to redeclare function %s", name)
+			break
 		}
 	}
 
-	self.funcs[name] = fn
-
-	return nil
+	eng.funcs[name] = fn
 }
 
-func (self *Engine) Pop() (Unit, error) {
-	return self.stack.Pop()
+func (eng *Engine) Pop() (Unit, error) {
+	return eng.stack.Pop()
 }
 
-func (self *Engine) Push(v Unit) {
-	self.stack.Push(v)
+func (eng *Engine) Push(v Unit) {
+	eng.stack.Push(v)
 }

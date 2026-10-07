@@ -17,12 +17,12 @@ func stringSet(e *Engine) error {
 	if err != nil {
 		return err
 	} else if strVar.Type != String {
-		return fmt.Errorf("Expected 'String', got '%s'", TypeNames[strVar.Type])
+		return fmt.Errorf("expected 'String', got '%s'", TypeNames[strVar.Type])
 	}
 
 	asArr := []rune(strVar.Value.(string))
 	if int(idx) > len(asArr) - 1 || idx < 0 {
-		return fmt.Errorf("Index %d out of bounds for %d ", idx, len(asArr))
+		return fmt.Errorf("index %d out of bounds for %d ", idx, len(asArr))
 	}
 
 	asArr[idx] = char
@@ -33,10 +33,10 @@ func stringSet(e *Engine) error {
 }
 
 func stringCreate(e *Engine) error {
-	var len int64 = util.Assert(e.Pop()).Value.(int64)
+	var len = util.Assert(e.Pop()).Value.(int64)
 
 	if len < 0 {
-		return fmt.Errorf("Invalid index %d", len)
+		return fmt.Errorf("invalid index %d", len)
 	}
 
 	var tmp = make([]rune, len)
@@ -72,7 +72,7 @@ func stringRef(e *Engine) error {
 	str := util.Assert(e.Pop()).Value.(string)
 
 	if int(idx) > len([]rune(str)) || idx < 0 {
-		return fmt.Errorf("Index %d out of bounds for %d", idx, len([]rune(str)))
+		return fmt.Errorf("index %d out of bounds for %d", idx, len([]rune(str)))
 	}
 
 	e.Push(MkChar([]rune(str)[idx]))

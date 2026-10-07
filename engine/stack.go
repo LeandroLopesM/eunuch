@@ -26,56 +26,56 @@ func NewStack[T any]() Stack[T] {
 	}
 }
 
-func (self *Stack[T]) Empty() bool {
-	return self.ptr == 0
+func (stack *Stack[T]) Empty() bool {
+	return stack.ptr == 0
 }
 
-func (self *Stack[T]) Pop() (T, error) {
-	if self.ptr-1 < self.guard {
+func (stack *Stack[T]) Pop() (T, error) {
+	if stack.ptr-1 < stack.guard {
 		var def T
 		return def, errors.New("Stack underflow")
 	}
 
-	self.ptr--
-	return self.raw[self.ptr+1], nil
+	stack.ptr--
+	return stack.raw[stack.ptr+1], nil
 }
 
-func (self *Stack[T]) Peek() (T, error) {
-	val, err := self.Pop()
-	self.ptr++
+func (stack *Stack[T]) Peek() (T, error) {
+	val, err := stack.Pop()
+	stack.ptr++
 
 	return val, err
 }
 
-// func (self *Stack[T]) grow() {
-// 	last := self.raw
-// 	self.raw = make([]T, self.size*2)
-// 	copy(last, self.raw)
+// func (stack *Stack[T]) grow() {
+// 	last := stack.raw
+// 	stack.raw = make([]T, stack.size*2)
+// 	copy(last, stack.raw)
 // }
 
-func (self *Stack[T]) Push(v T) {
-	if self.ptr+1 >= len(self.raw) {
+func (stack *Stack[T]) Push(v T) {
+	if stack.ptr+1 >= len(stack.raw) {
 		panic("Stack overflow")
 	}
 
-	self.ptr++
-	self.raw[self.ptr] = v
+	stack.ptr++
+	stack.raw[stack.ptr] = v
 }
 
-func (self *Engine) stackGuard() int {
-	if v, e := self.stackHistory.Peek(); e == nil {
+func (stack *Engine) stackGuard() int {
+	if v, e := stack.stackHistory.Peek(); e == nil {
 		return v
 	} else {
 		return 0
 	}
 }
 
-func (self *Engine) saveStack() {
-	self.stackHistory.Push(self.stack.ptr)
-	self.stack.guard = self.stack.ptr
+func (stack *Engine) saveStack() {
+	stack.stackHistory.Push(stack.stack.ptr)
+	stack.stack.guard = stack.stack.ptr
 }
 
-func (self *Engine) loadStack() {
-	_ = util.Assert(self.stackHistory.Pop())
-	self.stack.guard = self.stackGuard()
+func (stack *Engine) loadStack() {
+	_ = util.Assert(stack.stackHistory.Pop())
+	stack.stack.guard = stack.stackGuard()
 }

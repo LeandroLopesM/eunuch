@@ -83,7 +83,7 @@ func (o Option[T]) Try() (T, error) {
 	var tmp T
 	
 	if !o.inUse {
-		return tmp, errors.New("Empty option")
+		return tmp, errors.New("empty option")
 	}
 
 	return o.val, nil

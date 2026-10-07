@@ -32,7 +32,7 @@ func RegisterSelf(eng *Engine) {
 	eng.AddFunc("string-set!", Builtin{Args: []Type{Symbol, Integer, Char}, VarArgs: false, Return: String, Call: stringSet}) // This shouldnt get used muc}h
 
 	eng.AddFunc("vector", Builtin{Args: []Type{Any}, VarArgs: true, Return: Vector, Call: vector})
-	eng.AddFunc("vector-ref", Builtin{Args: []Type{Vector, Integer}, VarArgs: false, Return: Any, Call: vector})
+	eng.AddFunc("vector-ref", Builtin{Args: []Type{Vector, Integer}, VarArgs: false, Return: Any, Call: vectorRef})
 	eng.AddFunc("make-vector", Builtin{Args: []Type{Integer}, VarArgs: false, Return: Vector, Call: vectorCreate})           // This shouldnt get used muc}h
 	eng.AddFunc("vector-set!", Builtin{Args: []Type{Symbol, Integer, Any}, VarArgs: false, Return: Vector, Call: vectorSet}) // This shouldnt get used muc}h
 
@@ -65,9 +65,7 @@ func RegisterSelf(eng *Engine) {
 				func(s Scheme, e *Engine) error {
 					params := s.Params()
 					e.Push(params[0])
-					e.Evaluate(params[1])
-
-					return nil
+					return e.Evaluate(params[1])
 				}),
 		})
 
