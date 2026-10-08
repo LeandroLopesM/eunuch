@@ -15,11 +15,11 @@ functions: std.StringHashMap(Builtin),
 
 pub const Options = struct {
     verbose: bool = false,
-    error_style: enum { ignore, report, print_and_report } = .report,
+    error_style: enum { report, print_and_report } = .report,
     allocator: std.mem.Allocator = std.heap.page_allocator,
 };
 
-var options: Options = .{};
+pub const options: Options = .{};
 
 pub fn new(opt: Options) Engine {
     options = opt;
@@ -31,6 +31,26 @@ pub fn new(opt: Options) Engine {
         .variables = .init(options.allocator),
         .functions = .init(options.allocator),
     };
+}
+
+pub fn executeFile(self: *Engine, file_path: []const u8) !void {
+    const io: std.Io.Threaded = .init(options.allocator, .{});
+    defer io.deinit();
+    errdefer |err| {
+        std.log.err("Failed to read file '{s}' ({any})", .{ file_path, err });
+    }
+
+    const file = try std.Io.Dir.cwd().openFile(io, file_path, &.{});
+    defer file.close(io);
+
+    const stat = try file.stat(io);
+
+    const owned_buffer = try options.allocator.alloc(stat.size);
+    defer options.allocator.free(owned_buffer);
+
+    file.reader(io, &.{}).interface.readSliceAll(owned_buffer[0..]);
+
+    return self.executeStr(owned_buffer);
 }
 
 pub fn deinit(self: *Engine) void {
