@@ -23,3 +23,7 @@ type Builtin = engine.Builtin
 type BuiltinExec = engine.BuiltinExec
 type Stack[T any] = engine.Stack[T]
 type StagingFunc = engine.StagingFunc
+
+func NewEngine() Engine {
+	return engine.New()
+}
