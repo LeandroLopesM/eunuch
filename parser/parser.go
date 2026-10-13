@@ -258,6 +258,7 @@ func (p *parser) parseScheme() (Unit, error) {
 			return Null, err
 		}
 
+		p.consumeWhitespace()
 		out.Args = append(out.Args, unit)
 	}
 
