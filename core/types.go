@@ -4,6 +4,21 @@ import (
 	"fmt"
 )
 
+type Value interface {
+	ToString() string
+}
+
+type (
+	Symbol string
+	Integer int64
+	Float float64
+	Bool bool
+	String string
+	Char rune
+	Vector []Value
+	Pair [2]Value
+)
+
 type Scheme struct {
 	Args []Unit
 	Position Position
@@ -38,15 +53,7 @@ const (
 	// default type for anything, ignored
 	NullType Type = iota 
 
-	SchemeType
-	Symbol
-	Integer
-	Float
-	Bool
-	String
-	Char
-	Vector
-	Pair
+	
 
 	// Misc filters for arguments, not actual unit values
 	None
