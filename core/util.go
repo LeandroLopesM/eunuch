@@ -101,3 +101,8 @@ func debugUnit(unit Unit, depth int) {
 func repeat(depth int) string {
 	return strings.Repeat(". ", depth)
 }
+
+func (flag *ErrorFlags) Set(b ErrorFlags)    { *flag = b | *flag }
+func (flag *ErrorFlags) Clear(b ErrorFlags)  { *flag = b &^ *flag }
+func (flag *ErrorFlags) Toggle(b ErrorFlags) { *flag = b ^ *flag }
+func (flag ErrorFlags) Has(b ErrorFlags) bool    { return b&flag == b }

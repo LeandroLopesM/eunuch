@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"github.com/leandrolopesm/eunuch/core"
 	. "github.com/leandrolopesm/eunuch/core"
 	"github.com/leandrolopesm/eunuch/parser"
 	"github.com/leandrolopesm/eunuch/util"
@@ -54,12 +55,23 @@ func formatStackTrace(strace error) error {
 	var out  = strings.Builder {}
 	var idx = 0
 
-	for range calls[:len(calls)-1] {
-		out.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat(". ", idx+1), calls[idx]))
+	if core.ErrorStyle.Has(core.StackTrace) {
+		for range calls[:len(calls)-1] {
+			out.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat(". ", idx+1), calls[idx]))
+			idx++
+		}
+
 		idx++
 	}
 
-	out.WriteString(fmt.Sprintf("%s%s", strings.Repeat(". ", idx+1), aurora.Red(calls[len(calls)-1])))
+	var errMsg string
+	if core.ErrorStyle.Has(core.Colored) {
+		errMsg = aurora.Red(calls[len(calls)-1]).String()
+	} else {
+		errMsg = calls[len(calls)-1]
+	}
+
+	out.WriteString(fmt.Sprintf("%s%s", strings.Repeat(". ", idx), errMsg))
 
 	return errors.New(out.String())
 }

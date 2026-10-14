@@ -4,6 +4,13 @@ import (
 	"fmt"
 )
 
+type ErrorFlags int
+var ErrorStyle ErrorFlags = Colored | StackTrace
+const (
+	Colored ErrorFlags = 1 << iota
+	StackTrace
+)
+
 type Scheme struct {
 	Args []Unit
 	Position Position
@@ -36,7 +43,7 @@ type Type int
 
 const (
 	// default type for anything, ignored
-	NullType Type = iota 
+	NullType Type = iota
 
 	SchemeType
 	Symbol
