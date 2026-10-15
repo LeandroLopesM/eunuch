@@ -21,16 +21,6 @@ type Vector = core.Vector
 type Pair = core.Pair
 type Scheme = core.Scheme
 
-var SymbolVal = core.SymbolVal
-var IntegerVal = core.IntegerVal
-var FloatVal = core.FloatVal
-var BoolVal = core.BoolVal
-var StringVal = core.StringVal
-var CharVal = core.CharVal
-var VectorVal = core.VectorVal
-var PairVal = core.PairVal
-var SchemeVal = core.SchemeVal
-
 // Engine API.
 type Engine = engine.Engine
 type Builtin = engine.Builtin

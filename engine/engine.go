@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -62,6 +63,20 @@ func formatStackTrace(strace error) error {
 	return errors.New(out.String())
 }
 
+func (eng *Engine) GenArgv() []Value {
+	var vals []Value
+	for {
+		if val,err := eng.Pop(); err != nil {
+			break
+		} else {
+			vals = append(vals, val)
+		}
+	}
+
+	slices.Reverse(vals)
+	return vals
+}
+
 func (eng *Engine) ExecuteFile(file string) error {
 	if v, e := os.ReadFile(file); e != nil {
 		return e
@@ -72,9 +87,9 @@ func (eng *Engine) ExecuteFile(file string) error {
 
 func printAst(AST []Value, depth int) {
 	for _, val := range AST {
-		log.Debugf("%s> %s", strings.Repeat(". ", depth), val.Format())
+		log.Debugf("%s> %s", strings.Repeat(". ", depth), Format(val))
 
-		if args,ok := val.Raw.(Scheme); ok {
+		if args,ok := val.(Scheme); ok {
 			printAst(args.Params(), depth + 1)
 		}
 	}
@@ -101,7 +116,7 @@ func (eng *Engine) ExecuteStr(file, code string) error {
 }
 
 func (eng *Engine) Evaluate(rawValue Value) error {
-	switch typedVal := rawValue.Raw.(type) {
+	switch typedVal := rawValue.(type) {
 	case Scheme:
 		return eng.runScheme(typedVal)
 	case Symbol:
@@ -119,7 +134,7 @@ func (eng *Engine) Evaluate(rawValue Value) error {
 
 func (eng *Engine) GetVar(name string) (Value, error) {
 	if v, ok := eng.vars[name]; !ok {
-		return Value{}, fmt.Errorf("undefined variable '%s'", name)
+		return Null, fmt.Errorf("undefined variable '%s'", name)
 	} else {
 		return v, nil
 	}

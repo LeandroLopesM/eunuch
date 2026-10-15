@@ -9,8 +9,8 @@ import (
 )
 
 func vectorRef(eng *Engine) error {
-	idx := util.Assert(eng.Pop()).Raw.(int64)
-	vec := util.Assert(eng.Pop()).Raw.(Vector)
+	idx := util.Assert(eng.Pop()).(Integer)
+	vec := util.Assert(eng.Pop()).(Vector)
 
 	if int(idx) > len(vec) || idx < 0 {
 		return fmt.Errorf("index %d out of bounds for %d", idx, len(vec))
@@ -22,8 +22,8 @@ func vectorRef(eng *Engine) error {
 
 func vectorSet(eng *Engine) error {
 	val := util.Assert(eng.Pop())
-	idx := util.Assert(eng.Pop()).Raw.(int64)
-	vecVarName := util.Assert(eng.Pop()).Raw.(string)
+	idx := util.Assert(eng.Pop()).(Integer)
+	vecVarName := string(util.Assert(eng.Pop()).(Symbol))
 	vecVar,err := eng.GetVar(vecVarName)
 
 	if err != nil {
@@ -32,50 +32,40 @@ func vectorSet(eng *Engine) error {
 		return fmt.Errorf("expected 'Vector', got '%s'", vecVar.TypeString())
 	}
 
-	asArr := vecVar.Raw.(Vector)
+	asArr := vecVar.(Vector)
 	if int(idx) > len(asArr) - 1 || idx < 0 {
 		return fmt.Errorf("index %d out of bounds for %d ", idx, len(asArr))
 	}
 
 	asArr[idx] = val
 
-	eng.SetVar(vecVarName, VectorVal(asArr))
+	eng.SetVar(vecVarName, Vector{asArr})
 
 	return nil
 }
 
 func vectorCreate(eng *Engine) error {
-	var vecLen = util.Assert(eng.Pop()).Raw.(int64)
-
+	var vecLen = util.Assert(eng.Pop()).(Integer)
 	if vecLen < 0 {
 		return fmt.Errorf("invalid index %d", vecLen)
 	}
 
 	var tmp = make(Vector, vecLen)
-	eng.Push(VectorVal(tmp))
+	eng.Push(Vector{tmp})
 
 	return nil
 }
 
 func vector(eng *Engine) error {
-	var strs Vector
-	for {
-		if val, err := eng.Pop(); err != nil {
-			break
-		} else {
-			strs = append(strs, val)
-		}
-	}
+	vals := eng.GenArgv()
 
 	var out Vector
-	idx := len(strs) - 1
 
-	for idx >= 0 {
-		out = append(out, strs[idx])
-		idx--
+	for _,val := range vals {
+		out = append(out, val)
 	}
 
-	eng.Push(VectorVal(out))
+	eng.Push(Vector{out})
 	return nil
 }
 

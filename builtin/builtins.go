@@ -1,9 +1,6 @@
 package builtin
 
 import (
-	"reflect"
-	"slices"
-
 	. "github.com/leandrolopesm/eunuch/core"
 	. "github.com/leandrolopesm/eunuch/engine"
 	"github.com/leandrolopesm/eunuch/util"
@@ -88,20 +85,6 @@ func RegisterSelf(eng *Engine) {
 	)
 }
 
-func genArgv(e *Engine) []Value {
-	var vals []Value
-	for {
-		if val,err := e.Pop(); err != nil {
-			break
-		} else {
-			vals = append(vals, val)
-		}
-	}
-
-	slices.Reverse(vals)
-	return vals
-}
-
 /*
  *	As i understand, (quote) essentially
  *	defers evaluation of an expression
@@ -124,44 +107,40 @@ func quote(eng *Engine) error {
 
 func define(eng *Engine) error {
 	value := util.Assert(eng.Pop())
-	name := util.Assert(eng.Pop())
+	name := util.Assert(eng.Pop()).(Symbol)
 
-	eng.SetVar(name.Raw.(string), value)
+	eng.SetVar(name.ToString(), value)
 	return nil
 }
 
-func isX[T any]() BuiltinExec {
+func isX[T Value]() BuiltinExec {
 	return func(eng *Engine) error {
-		if val, err := eng.Pop(); err != nil {
-			return err
-		} else {
-			eng.Push(BoolVal(reflect.TypeFor[T]() == reflect.TypeOf(val.Raw)))
-		}
+		val,_ := eng.Pop();
 
+		eng.Push(Bool(Is[T](val)))
 		return nil
 	}
 }
 
-func newline(eng *Engine) error {
-	print("\n")
-
-	return nil
-}
-
 func eqv(eng *Engine) error {
-	lhs := util.Assert(eng.Pop()) // We can assert because the argCount was checked
+	lhs := util.Assert(eng.Pop())
 	rhs := util.Assert(eng.Pop())
 
 	if lhs.Type() != rhs.Type() {
-		eng.Push(BoolVal(false))
+		eng.Push(Bool(false))
 	}
 
-	eng.Push(BoolVal(lhs == rhs))
+	eng.Push(Bool(lhs == rhs))
+	return nil
+}
+
+func newline(eng *Engine) error {
+	print("\n")
 	return nil
 }
 
 func display(eng *Engine) error {
-	args := genArgv(eng)
+	args := eng.GenArgv()
 	for _,arg := range args {
 		print(arg.ToString())
 	}

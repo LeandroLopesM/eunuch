@@ -207,11 +207,11 @@ func (p *parser) parseQuote() (Value, error) {
 	)
 
 	if unit, err = p.parseExpression(); err != nil {
-		return Value{}, err
+		return Null, err
 	}
 
-	return SchemeVal(Scheme{
-			Args:     slices.Concat([]Value{SymbolVal("quote"), unit}),
+	return Scheme(Scheme{
+			Args:     slices.Concat([]Value{Symbol("quote"), unit}),
 			Position: p.currPos(),
 	}), nil
 }
@@ -223,12 +223,12 @@ func (p *parser) parseString() (Value, error) {
 
 	if p.eof() {
 		p.pos = start
-		return Value{}, p.err("Unclosed string starts here")
+		return Null, p.err("Unclosed string starts here")
 	}
 
 	p.consume()
 
-	return StringVal(str), nil
+	return String(str), nil
 }
 
 func (p *parser) parseScheme() (Value, error) {
@@ -243,7 +243,7 @@ func (p *parser) parseScheme() (Value, error) {
 	for {
 		if p.eof() {
 			p.pos = start
-			return Value{}, p.err("Unclosed scheme here")
+			return Null, p.err("Unclosed scheme here")
 		} else if p.next() == ')' {
 			_ = p.consume()
 			break
@@ -255,14 +255,14 @@ func (p *parser) parseScheme() (Value, error) {
 		)
 
 		if unit, err = p.parseExpression(); err != nil {
-			return Value{}, err
+			return Null, err
 		}
 
 		p.consumeWhitespace()
 		out.Args = append(out.Args, unit)
 	}
 
-	return SchemeVal(out), nil
+	return Scheme(out), nil
 }
 
 func isHex(c rune) bool {
@@ -282,9 +282,9 @@ func (p *parser) parseInt() (Value, error) {
 	}
 
 	if val, err := strconv.ParseInt(buffer, radix, 64); err != nil {
-		return Value{}, p.err("invalid integer literal %s", buffer)
+		return Null, p.err("invalid integer literal %s", buffer)
 	} else {
-		return IntegerVal(val), nil
+		return Integer(val), nil
 	}
 }
 
@@ -305,9 +305,9 @@ func (p *parser) parseFloat() (Value, error) {
 	}
 
 	if val, err := strconv.ParseFloat(string(buffer), 64); err != nil {
-		return Value{}, p.err("Invalid float literal %s", string(buffer))
+		return Null, p.err("Invalid float literal %s", string(buffer))
 	} else {
-		return FloatVal(val), nil
+		return Float(val), nil
 	}
 }
 
@@ -326,7 +326,7 @@ func (p *parser) parseLiteral() (Value, error) {
 }
 
 func (p *parser) parseSymbol() (Value, error) {
-	return SymbolVal(p.consumeWhile(isSymbolChar)), nil
+	return Symbol(p.consumeWhile(isSymbolChar)), nil
 }
 
 func isSymbolChar(c rune) bool {
@@ -336,7 +336,7 @@ func isSymbolChar(c rune) bool {
 func (p *parser) parseBool() (Value, error) {
 	val := p.consume()
 
-	return BoolVal(val == 't'), nil
+	return Bool(val == 't'), nil
 }
 
 func (p *parser) parseChar() (Value, error) {
@@ -346,16 +346,16 @@ func (p *parser) parseChar() (Value, error) {
 
 	switch charName {
 	case "space":
-		return CharVal(' '), nil
+		return Char(' '), nil
 	case "tab":
-		return CharVal('\t'), nil
+		return Char('\t'), nil
 	case "\\n":
-		return CharVal('\n'), nil
+		return Char('\n'), nil
 	default:
 		if len(charName) > 1 {
-			return Value{}, p.err("Unknown character literal %v", charName)
+			return Null, p.err("Unknown character literal %v", charName)
 		}
 
-		return CharVal(([]rune(charName))[0]), nil
+		return Char(([]rune(charName))[0]), nil
 	}
 }
