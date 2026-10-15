@@ -6,7 +6,11 @@ import (
 	"strings"
 )
 
-type Value struct {Raw any}
+type Value interface {
+	ToString() string
+	TypeString() string
+	Type() reflect.Type
+}
 
 func (v Value) ToString() string {
 	switch val := v.Raw.(type) {
@@ -37,48 +41,46 @@ func (v Value) Format() string {
 }
 
 type (
-	Symbol string
+	Symbol  string
 	Integer int64
-	Float float64
-	Bool bool
-	String string
-	Char rune
-	Vector []Value
-	Pair [2]Value
-	Scheme struct {
-		Args []Value
+	Float   float64
+	Bool    bool
+	String  string
+	Char    rune
+	Vector  []Value
+	Pair    [2]Value
+	Scheme  struct {
+		Args     []Value
 		Position Position
 	}
 )
 
-func SymbolVal(v string) Value {
-	return Value { Raw: v }
-}
-func IntegerVal(v int64) Value {
-	return Value { Raw: v }
-}
-func FloatVal(v float64) Value {
-	return Value { Raw: v }
-}
-func BoolVal(v bool) Value {
-	return Value { Raw: v }
-}
-func StringVal(v string) Value {
-	return Value { Raw: v }
-}
-func CharVal(v rune) Value {
-	return Value { Raw: v }
-}
-func VectorVal(v []Value) Value {
-	return Value { Raw: v }
-}
-func PairVal(v [2]Value) Value {
-	return Value { Raw: v }
-}
-func SchemeVal(v Scheme) Value {
-	return Value { Raw: v }
-}
+func (s Symbol) ToString() string   { return string(s) }
+func (s Symbol) Type() reflect.Type { return reflect.TypeFor[Symbol]() }
+func (s Symbol) TypeString() string { return "Symbol" }
 
+func (s Integer) ToString() string   { return fmt.Sprintf("%b", s) }
+func (s Integer) TypeString() string { return "Integer" }
+func (s Integer) Type() reflect.Type { return reflect.TypeFor[Integer]() }
+
+func (s Float) ToString() string   { return fmt.Sprintf("%b", s) }
+func (s Float) TypeString() string { return "Float" }
+func (s Float) Type() reflect.Type { return reflect.TypeFor[Float]() }
+
+func (s Bool) ToString() string   { return fmt.Sprintf("%v", s) }
+func (s Bool) TypeString() string { return "Bool" }
+func (s Bool) Type() reflect.Type { return reflect.TypeFor[Bool]() }
+
+func (s String) ToString() string   { return string(s) }
+func (s String) TypeString() string { return "String" }
+func (s String) Type() reflect.Type { return reflect.TypeFor[String]() }
+
+func (s Char) ToString() string   { return fmt.Sprintf("%v", s) }
+func (s Char) TypeString() string { return "Char" }
+func (s Char) Type() reflect.Type { return reflect.TypeFor[Char]() }
+
+func (s Vector) TypeString() string { return "Vector" }
+func (s Vector) Type() reflect.Type { return reflect.TypeFor[Vector]() }
 func (v Vector) ToString() string {
 	var ret strings.Builder
 	for i := range v {
@@ -92,10 +94,11 @@ func (v Vector) ToString() string {
 	return ret.String() + ")"
 }
 
+func (s Pair) TypeString() string { return "Pair" }
+func (s Pair) Type() reflect.Type { return reflect.TypeFor[Pair]() }
 func (p Pair) ToString() string {
 	return fmt.Sprintf("(%v . %v)", p[0].ToString(), p[1].ToString())
 }
-
 
 func (s *Scheme) Params() []Value {
 	if len(s.Args) == 0 {
@@ -109,7 +112,7 @@ func (s *Scheme) Name() string {
 	if len(s.Args) == 0 {
 		return ""
 	} else {
-		return s.Args[0].Raw.(string)
+		return s.Args[0].ToString()
 	}
 }
 
