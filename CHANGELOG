@@ -1,0 +1,5 @@
+v0.26.0
+ - Transferred struct 'Unit' to new struct 'Value'
+ - Changed type system from a union of Type/Value to a single value stored as 'any'
+ - Removed argument type matching due to needless complexity
+ -
