@@ -10,7 +10,7 @@ import (
 	. "github.com/leandrolopesm/eunuch/engine"
 )
 
-func OrdOp(kind rune) BuiltinExec {
+func ordOp(kind rune) BuiltinExec {
 	return func(e *Engine) error {
 		argv := genArgv(e)
 		applies := func (prev, new float64) bool {
@@ -29,10 +29,13 @@ func OrdOp(kind rune) BuiltinExec {
 				tmp = arg
 			}
 		}
+
+		e.Push(tmp)
+		return nil
 	}
 }
 
-func MathOp(kind rune) BuiltinExec {
+func mathOp(kind rune) BuiltinExec {
 	return func(e *Engine) error {
 		argv := genArgv(e)
 

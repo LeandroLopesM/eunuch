@@ -23,10 +23,10 @@ func charOp(op string) BuiltinExec {
 
 	return func (e *Engine) error {
 		// Stack pops inverted
-		charB := util.Assert(e.Pop()).Any.(rune)
-		charA := util.Assert(e.Pop()).Any.(rune)
+		charB := util.Assert(e.Pop()).Raw.(rune)
+		charA := util.Assert(e.Pop()).Raw.(rune)
 
-		e.Push(Value{Any: exec(charA, charB)})
+		e.Push(Value{Raw: exec(charA, charB)})
 		return nil
 	}
 }
@@ -46,10 +46,10 @@ func charCiOp(op string) BuiltinExec {
 
 	return func (e *Engine) error {
 		// Stack pops inverted
-		charB := unicode.ToUpper(util.Assert(e.Pop()).Any.(rune))
-		charA :=  unicode.ToUpper(util.Assert(e.Pop()).Any.(rune))
+		charB := unicode.ToUpper(util.Assert(e.Pop()).Raw.(rune))
+		charA :=  unicode.ToUpper(util.Assert(e.Pop()).Raw.(rune))
 
-		e.Push(Value{Any: exec(charA, charB)})
+		e.Push(Value{Raw: exec(charA, charB)})
 		return nil
 	}
 }

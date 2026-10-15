@@ -20,14 +20,14 @@ func RegisterSelf(eng *Engine) {
 	eng.AddFunc("rational?", Builtin{Argc: 1, Call: isX[Float]()})
 	eng.AddFunc("eqv", Builtin{VarArgs: true, Call: eqv})
 
-	eng.AddFunc("+", Builtin{VarArgs: true, Call: MathOp('+')})
-	eng.AddFunc("-", Builtin{VarArgs: true, Call: MathOp('-')})
-	eng.AddFunc("*", Builtin{VarArgs: true, Call: MathOp('*')})
-	eng.AddFunc("/", Builtin{VarArgs: true, Call: MathOp('/')})
+	eng.AddFunc("+", Builtin{VarArgs: true, Call: mathOp('+')})
+	eng.AddFunc("-", Builtin{VarArgs: true, Call: mathOp('-')})
+	eng.AddFunc("*", Builtin{VarArgs: true, Call: mathOp('*')})
+	eng.AddFunc("/", Builtin{VarArgs: true, Call: mathOp('/')})
 	eng.AddFunc("expt", Builtin{VarArgs: true, Call: expt})
 
-	eng.AddFunc("max", Builtin{VarArgs: true, Call: OrdOp('>')})
-	eng.AddFunc("min", Builtin{VarArgs: true, Call: OrdOp('<')})
+	eng.AddFunc("max", Builtin{VarArgs: true, Call: ordOp('>')})
+	eng.AddFunc("min", Builtin{VarArgs: true, Call: ordOp('<')})
 
 	eng.AddFunc("string", Builtin{VarArgs: true, Call: stringize})
 	eng.AddFunc("string-ref", Builtin{Argc: 2, Call: stringRef})
