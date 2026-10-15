@@ -135,24 +135,24 @@ func (p *parser) parseName() string {
  * ============================================================= */
 
 /// ParseFile parses a file given the grammar described above
-func ParseFile(fileName, fileContent string) ([]Unit, error) {
+func ParseFile(fileName, fileContent string) ([]Value, error) {
 	parser := parser{
 		pos:   0,
 		input: []rune(fileContent),
 		file:  fileName,
 	}
 
-	var file []Unit
+	var file []Value
 	for !parser.eof() {
 		parser.consumeWhitespace()
 
 		var (
-			unit Unit
+			unit Value
 			err  error
 		)
 
 		if unit, err = parser.parseExpression(); err != nil {
-			return []Unit{}, err
+			return []Value{}, err
 		}
 		file = append(file, unit)
 	}
@@ -160,7 +160,7 @@ func ParseFile(fileName, fileContent string) ([]Unit, error) {
 	return file, nil
 }
 
-func (p *parser) parseExpression() (Unit, error) {
+func (p *parser) parseExpression() (Value, error) {
 tryAgain:
 	switch p.next() {
 	case ';':
@@ -198,78 +198,78 @@ tryAgain:
 	}
 }
 
-func (p *parser) parseQuote() (Unit, error) {
+func (p *parser) parseQuote() (Value, error) {
 	p.consume()
 
 	var (
-		unit Unit
+		unit Value
 		err  error
 	)
 
 	if unit, err = p.parseExpression(); err != nil {
-		return Null, err
+		return Value{}, err
 	}
 
-	return MkScheme(Scheme{
-		Args:     slices.Concat([]Unit{MkSymbol("quote"), unit}),
-		Position: p.currPos(),
+	return SchemeVal(Scheme{
+			Args:     slices.Concat([]Value{SymbolVal("quote"), unit}),
+			Position: p.currPos(),
 	}), nil
 }
 
-func (p *parser) parseString() (Unit, error) {
+func (p *parser) parseString() (Value, error) {
 	_ = p.consume()
 	start := p.pos
 	str := p.consumeWhile(func(c rune) bool { return c != '"' })
 
 	if p.eof() {
 		p.pos = start
-		return Null, p.err("Unclosed string starts here")
+		return Value{}, p.err("Unclosed string starts here")
 	}
 
 	p.consume()
 
-	return MkString(str), nil
+	return StringVal(str), nil
 }
 
-func (p *parser) parseScheme() (Unit, error) {
+func (p *parser) parseScheme() (Value, error) {
 	p.expect("(")
-	
+
 	start := p.pos
 	out := Scheme{
 		Position: p.currPos(),
-		Args: []Unit{},
+		Args: []Value{},
 	}
 
 	for {
 		if p.eof() {
 			p.pos = start
-			return Null, p.err("Unclosed scheme here")
+			return Value{}, p.err("Unclosed scheme here")
 		} else if p.next() == ')' {
 			_ = p.consume()
 			break
 		}
 
 		var (
-			unit Unit
+			unit Value
 			err error
 		)
 
 		if unit, err = p.parseExpression(); err != nil {
-			return Null, err
+			return Value{}, err
 		}
 
 		p.consumeWhitespace()
 		out.Args = append(out.Args, unit)
 	}
 
-	return MkScheme(out), nil
+	return SchemeVal(out), nil
 }
 
 func isHex(c rune) bool {
 	return unicode.IsDigit(c) || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
 }
 
-func (p *parser) parseInt() (Unit, error) {
+func (p *parser) parseInt() (Value, error) {
 	radix := 10
 	if p.next() == 'x' {
 		radix = 16
@@ -282,13 +282,13 @@ func (p *parser) parseInt() (Unit, error) {
 	}
 
 	if val, err := strconv.ParseInt(buffer, radix, 64); err != nil {
-		return Null, p.err("invalid integer literal %s", buffer)
+		return Value{}, p.err("invalid integer literal %s", buffer)
 	} else {
-		return MkInt(val), nil
+		return IntegerVal(val), nil
 	}
 }
 
-func (p *parser) parseFloat() (Unit, error) {
+func (p *parser) parseFloat() (Value, error) {
 	var buffer []rune
 
 	if p.next() == '.' {
@@ -305,13 +305,13 @@ func (p *parser) parseFloat() (Unit, error) {
 	}
 
 	if val, err := strconv.ParseFloat(string(buffer), 64); err != nil {
-		return Null, p.err("Invalid float literal %s", string(buffer))
+		return Value{}, p.err("Invalid float literal %s", string(buffer))
 	} else {
-		return MkFloat(val), nil
+		return FloatVal(val), nil
 	}
 }
 
-func (p *parser) parseLiteral() (Unit, error) {
+func (p *parser) parseLiteral() (Value, error) {
 	p.expect("#")
 
 	switch p.next() {
@@ -325,37 +325,37 @@ func (p *parser) parseLiteral() (Unit, error) {
 	return p.parseSymbol()
 }
 
-func (p *parser) parseSymbol() (Unit, error) {
-	return MkSymbol(p.consumeWhile(isSymbolChar)), nil
+func (p *parser) parseSymbol() (Value, error) {
+	return SymbolVal(p.consumeWhile(isSymbolChar)), nil
 }
 
 func isSymbolChar(c rune) bool {
 	return c != '(' && c != ')' && !unicode.IsSpace(c)
 }
 
-func (p *parser) parseBool() (Unit, error) {
+func (p *parser) parseBool() (Value, error) {
 	val := p.consume()
 
-	return MkBool(val == 't'), nil
+	return BoolVal(val == 't'), nil
 }
 
-func (p *parser) parseChar() (Unit, error) {
+func (p *parser) parseChar() (Value, error) {
 	p.expect("\\")
 
 	charName := p.parseName()
 
 	switch charName {
 	case "space":
-		return MkChar(' '), nil
+		return CharVal(' '), nil
 	case "tab":
-		return MkChar('\t'), nil
+		return CharVal('\t'), nil
 	case "\\n":
-		return MkChar('\n'), nil
+		return CharVal('\n'), nil
 	default:
 		if len(charName) > 1 {
-			return Null, p.err("Unknown character literal %v", charName)
+			return Value{}, p.err("Unknown character literal %v", charName)
 		}
 
-		return MkChar(([]rune(charName))[0]), nil
+		return CharVal(([]rune(charName))[0]), nil
 	}
 }

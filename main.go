@@ -6,7 +6,6 @@ import (
 
 	log "github.com/charmbracelet/log"
 	"github.com/leandrolopesm/eunuch/builtin"
-	"github.com/leandrolopesm/eunuch/core"
 	"github.com/leandrolopesm/eunuch/engine"
 	"github.com/leandrolopesm/eunuch/util"
 
@@ -32,7 +31,7 @@ func main() {
 		}
 
 		if v, e := lispEngine.Pop(); e == nil { // If the last call pushed a value, print it
-			fmt.Printf("\n;; %v", core.SprintUnit(v))
+			fmt.Printf("\n;; %v", v.ToString())
 		}
 	}
 }
@@ -57,7 +56,7 @@ func runREPL(lispEngine engine.Engine) {
 			}
 
 			if v, e := lispEngine.Pop(); e == nil { // If the last call pushed a value, print it
-				core.PrintUnit(v)
+				fmt.Println(v.ToString())
 			}
 		}
 	}

@@ -2,168 +2,128 @@ package builtin
 
 import (
 	"fmt"
+	"log"
 	"math"
+	"reflect"
 
 	. "github.com/leandrolopesm/eunuch/core"
 	. "github.com/leandrolopesm/eunuch/engine"
-	"github.com/leandrolopesm/eunuch/util"
 )
 
 func OrdOp(kind rune) BuiltinExec {
-	return func(eng *Engine) error {
-		var nums []Unit
-		var overallType Type
-
-		val, err := eng.Pop()
-		for err == nil {
-			if len(nums) == 0 {
-				overallType = val.Type
-			} else if val.Type != overallType {
-				return fmt.Errorf(
-					"%s expects all arguments to be the same type (Was %s, now %s)",
-					util.If(kind == '>',
-						"(max)",
-						"(min)",
-					),
-					overallType.ToString(),
-					val.Type.ToString(),
-				)
+	return func(e *Engine) error {
+		argv := genArgv(e)
+		applies := func (prev, new float64) bool {
+			switch kind {
+			case '>':
+				return new > prev
+			case '<':
+				return new < prev
 			}
-
-			nums = append(nums, val)
-			val, err = eng.Pop()
+			panic("unreachable")
 		}
 
-		switch overallType {
-		case Float:
-			var curr = numAsF(nums[0])
-			for _, num := range nums {
-				if util.If(kind == '>',
-					numAsF(num) > curr,
-					numAsF(num) < curr,
-				) {
-					curr = numAsF(num)
-				}
+		var tmp Value
+		for _,arg := range argv {
+			if applies(tmp.Raw.(float64), arg.Raw.(float64)) {
+				tmp = arg
 			}
+		}
+	}
+}
 
-			eng.Push(MkFloat(curr))
+func MathOp(kind rune) BuiltinExec {
+	return func(e *Engine) error {
+		argv := genArgv(e)
+
+		if len(argv) == 1 {
+			return unaryOp(kind, argv[0], e)
+		}
+		return binaryOp(kind, argv, e)
+	}
+}
+
+func binaryOp(kind rune, operands []Value, e *Engine) error {
+	type number interface {int64|float64}
+	var applyOp = func(lhs, rhs float64) float64 {
+		switch kind {
+		case '-':
+			return lhs - rhs
+		case '+':
+			return lhs + rhs
+		case '/':
+			return lhs / rhs
+		case '*':
+			return lhs * rhs
+		}
+
+		log.Fatalf("Unknown operator %c", kind)
+		panic("Unreachable")
+	}
+
+	var (
+		intType = reflect.TypeFor[Integer]()
+	)
+
+	finalType := intType
+	output := 0.0
+
+	for _,op := range operands {
+		// If it was an integer and now is a float we need to assume the output will be float
+		if op.Type() != finalType && finalType == intType {
+			finalType = op.Type()
+		}
+
+		switch val := op.Raw.(type) {
+		case Integer, Float:
+			output = applyOp(output, val.(float64))
 		default:
-			var curr = nums[0].Value.(int64)
-			for _, num := range nums {
-				if util.If(
-					kind == '>',
-					num.Value.(int64) > curr,
-					num.Value.(int64) < curr,
-				) {
-					curr = num.Value.(int64)
-				}
-			}
-
-			eng.Push(MkInt(curr))
+			return fmt.Errorf("invalid type '%s' for mathematical operation", op.TypeString())
 		}
-
-		return nil
-	}
-}
-
-func numAsF(num Unit) float64 {
-	switch num.Type {
-	case Float:
-		return num.Value.(float64)
-	default:
-		return float64(num.Value.(int64))
-	}
-}
-
-func expt(eng *Engine) error {
-	lhs, lErr := eng.Pop()
-	rhs, rErr := eng.Pop()
-
-	if lErr != nil {
-		return lErr
-	} else if rErr != nil {
-		return rErr
 	}
 
-	var lFloat = numAsF(lhs)
-	var rFloat = numAsF(rhs)
-
-	eng.Push(MkFloat(math.Pow(lFloat, rFloat)))
+	if finalType == intType {
+		e.Push(IntegerVal(int64(output)))
+	} else {
+		e.Push(FloatVal(output))
+	}
 
 	return nil
 }
 
-// TODO: (- 4) => -4.
-// TODO: (/ 4) => 1/4.
-func MathOp(kind rune) BuiltinExec {
-	floatOp := func(lhs float64, rhs float64) float64 {
-		switch kind {
-		case '+':
-			return lhs + rhs
-		case '-':
-			return lhs - rhs
-		case '*':
-			return lhs * rhs
-		case '/':
-			return lhs / rhs
+func unaryOp(kind rune, operand Value, e *Engine) error {
+	switch kind {
+	case '-':
+		if asInt,ok := operand.Raw.(Integer); ok {
+			e.Push(IntegerVal(int64(asInt) * -1))
+		} else if asFloat,ok := operand.Raw.(Integer); ok {
+			e.Push(FloatVal(float64(asFloat) * -1.0))
+		} else {
+			return fmt.Errorf("invalid type for mathematical operation '%T'", operand)
 		}
-
-		panic(fmt.Sprintf("Undefined operation %c", kind))
+	case '/':
+		if asInt,ok := operand.Raw.(Integer); ok {
+			e.Push(IntegerVal(1/int64(asInt)))
+		} else if asFloat,ok := operand.Raw.(Integer); ok {
+			e.Push(FloatVal(1/float64(asFloat)))
+		} else {
+			return fmt.Errorf("invalid type for mathematical operation '%T'", operand)
+		}
+	default:
+		return fmt.Errorf("math operation '%c' does not support unary usage", kind)
 	}
 
-	intOp := func(lhs int64, rhs int64) int64 {
-		switch kind {
-		case '+':
-			return lhs + rhs
-		case '-':
-			return lhs - rhs
-		case '*':
-			return lhs * rhs
-		case '/':
-			return lhs / rhs
-		}
+	return nil
+}
 
-		panic(fmt.Sprintf("undefined operation %c", kind))
-	}
+func expt(eng *Engine) error {
+	lhs,_ := eng.Pop()
+	rhs,_ := eng.Pop()
 
-	return func(eng *Engine) error {
-		filter := Number
-		var numbers []Unit
-		var outType = Integer // We can be optimistic, right?
+	var lFloat = lhs.Raw.(float64)
+	var rFloat = rhs.Raw.(float64)
 
-		nextUnit, err := eng.Pop()
+	eng.Push(FloatVal(math.Pow(lFloat, rFloat)))
 
-		for err == nil {
-			if !filter.Matches(nextUnit.Type) {
-				return fmt.Errorf("expected integer or float, got %s", nextUnit.Type.ToString())
-			}
-
-			if nextUnit.Type == Float {
-				outType = Float
-			}
-
-			numbers = append(numbers, nextUnit)
-
-			nextUnit, err = eng.Pop()
-		}
-
-		switch outType {
-		case Float:
-			var out = numAsF(numbers[0])
-			for _, num := range numbers[1:] {
-				out = floatOp(out, numAsF(num))
-			}
-
-			eng.Push(MkFloat(out))
-		default:
-			var out = numbers[0].Value.(int64)
-			for _, num := range numbers[1:] {
-				out = intOp(out, num.Value.(int64))
-			}
-
-			eng.Push(MkInt(out))
-		}
-
-		return nil
-	}
+	return nil
 }
