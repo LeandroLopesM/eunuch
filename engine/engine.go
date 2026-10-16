@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/leandrolopesm/eunuch/core"
 	. "github.com/leandrolopesm/eunuch/core"
 	"github.com/leandrolopesm/eunuch/parser"
 	"github.com/leandrolopesm/eunuch/util"
@@ -26,6 +25,18 @@ type Builtin struct {
 
 	Call BuiltinExec
 }
+
+type ErrorFlag uint8
+const (
+	Colored ErrorFlag = 1<<iota
+	StackTrace
+)
+func (flag *ErrorFlag) Set(b ErrorFlag)      { *flag = b | *flag }
+func (flag *ErrorFlag) Clear(b ErrorFlag)    { *flag = b &^ *flag }
+func (flag *ErrorFlag) Toggle(b ErrorFlag)   { *flag = b ^ *flag }
+func (flag *ErrorFlag) Has(b ErrorFlag) bool { return b&*flag != 0 }
+
+var ErrorStyle ErrorFlag = Colored | StackTrace
 
 type Engine struct {
 	stack        Stack[Value]
@@ -54,7 +65,7 @@ func formatStackTrace(strace error) error {
 	var out  = strings.Builder {}
 	var idx = 0
 
-	if core.ErrorStyle.Has(core.StackTrace) {
+	if ErrorStyle.Has(StackTrace) {
 		for range calls[:len(calls)-1] {
 			out.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat(". ", idx+1), calls[idx]))
 			idx++
@@ -64,7 +75,7 @@ func formatStackTrace(strace error) error {
 	}
 
 	var errMsg string
-	if core.ErrorStyle.Has(core.Colored) {
+	if ErrorStyle.Has(Colored) {
 		errMsg = aurora.Red(calls[len(calls)-1]).String()
 	} else {
 		errMsg = calls[len(calls)-1]

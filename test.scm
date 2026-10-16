@@ -1,6 +1,6 @@
 (define
     bar
-    '(+ 12 y)
+    (+ 12 y)
 )
 (define y 13)
 
