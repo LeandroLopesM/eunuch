@@ -1,0 +1,7 @@
+v0.26.0
+ > old Unit struct is now interface Value
+ . > Allows custom type declarations as long as they adhere to the interface
+ . > Simplifies existing code by eliminating the unit.Value.(Type) pattern
+ > Simplified math operation logic
+ > Added method for generating an argument vector (Engine.GenArgv)
+ . > !! This does not check argc

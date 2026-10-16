@@ -9,8 +9,8 @@ import (
 )
 
 func vectorRef(eng *Engine) error {
-	idx := util.Assert(eng.Pop()).Value.(int64)
-	vec := util.Assert(eng.Pop()).Value.(VectorVal)
+	idx := util.Assert(eng.Pop()).(Integer)
+	vec := util.Assert(eng.Pop()).(Vector)
 
 	if int(idx) > len(vec) || idx < 0 {
 		return fmt.Errorf("index %d out of bounds for %d", idx, len(vec))
@@ -22,60 +22,50 @@ func vectorRef(eng *Engine) error {
 
 func vectorSet(eng *Engine) error {
 	val := util.Assert(eng.Pop())
-	idx := util.Assert(eng.Pop()).Value.(int64)
-	vecVarName := util.Assert(eng.Pop()).Value.(string)
+	idx := util.Assert(eng.Pop()).(Integer)
+	vecVarName := string(util.Assert(eng.Pop()).(Symbol))
 	vecVar,err := eng.GetVar(vecVarName)
 
 	if err != nil {
 		return err
-	} else if vecVar.Type != Vector {
-		return fmt.Errorf("expected 'Vector', got '%s'", vecVar.Type.ToString())
+	} else if vecVar.TypeString() != "Vector" {
+		return fmt.Errorf("expected 'Vector', got '%s'", vecVar.TypeString())
 	}
 
-	asArr := vecVar.Value.(VectorVal)
+	asArr := vecVar.(Vector)
 	if int(idx) > len(asArr) - 1 || idx < 0 {
 		return fmt.Errorf("index %d out of bounds for %d ", idx, len(asArr))
 	}
 
 	asArr[idx] = val
 
-	eng.SetVar(vecVarName, MkVector(asArr))
+	eng.SetVar(vecVarName, Vector{asArr})
 
 	return nil
 }
 
 func vectorCreate(eng *Engine) error {
-	var vecLen = util.Assert(eng.Pop()).Value.(int64)
-
+	var vecLen = util.Assert(eng.Pop()).(Integer)
 	if vecLen < 0 {
 		return fmt.Errorf("invalid index %d", vecLen)
 	}
 
-	var tmp = make(VectorVal, vecLen)
-	eng.Push(MkVector(tmp))
+	var tmp = make(Vector, vecLen)
+	eng.Push(Vector{tmp})
 
 	return nil
 }
 
 func vector(eng *Engine) error {
-	var strs VectorVal
-	for {
-		if val, err := eng.Pop(); err != nil {
-			break
-		} else {
-			strs = append(strs, val)
-		}
+	vals := eng.GenArgv()
+
+	var out Vector
+
+	for _,val := range vals {
+		out = append(out, val)
 	}
 
-	var out VectorVal
-	idx := len(strs) - 1
-
-	for idx >= 0 {
-		out = append(out, strs[idx])
-		idx--
-	}
-
-	eng.Push(MkVector(out))
+	eng.Push(Vector{out})
 	return nil
 }
 
